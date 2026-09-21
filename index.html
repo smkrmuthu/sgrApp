@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=14" />
+  <link rel="stylesheet" href="style.css?v=17" />
 </head>
 <body>
   <!-- TOP APP BAR -->
@@ -175,7 +175,7 @@
           <circle cx="12" cy="12" r="10"></circle>
           <polyline points="12 6 12 12 16 14"></polyline>
         </svg>
-        <span>PAST WORK ORDERS (<span id="historyTabCount">3</span>)</span>
+        <span>WORK ORDERS (<span id="historyTabCount">3</span>)</span>
       </button>
       <button class="nav-tab" id="tabUsers" data-view="users" onclick="switchMainView('users')" style="display: none;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
@@ -184,6 +184,14 @@
           <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"></path>
         </svg>
         <span>USERS (<span id="usersCount">0</span>)</span>
+      </button>
+      <button class="nav-tab" id="tabReports" data-view="reports" onclick="switchMainView('reports')" style="display: none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+          <line x1="18" y1="20" x2="18" y2="10"></line>
+          <line x1="12" y1="20" x2="12" y2="4"></line>
+          <line x1="6" y1="20" x2="6" y2="14"></line>
+        </svg>
+        <span>REPORTS</span>
       </button>
     </div>
     <div class="nav-extra-status">
@@ -205,7 +213,7 @@
             <h1 class="draft-title">Not saved yet</h1>
             <p class="draft-hint">Fill in the details, then add the first line item below. The work order is saved and numbered when you add the first line or press Save.</p>
           </div>
-          <button type="button" class="action-btn" id="draftOpenPast">Open from Past Work Orders</button>
+          <button type="button" class="action-btn" id="draftOpenPast">Open from Work Orders</button>
         </div>
         <form id="draftHeaderForm" class="draft-form" autocomplete="off">
           <div class="draft-grid">
@@ -758,9 +766,9 @@
 
     </div> <!-- END VIEW 1: ACTIVE WORKBENCH -->
 
-    <!-- VIEW 2: SEARCHABLE PAST WORK ORDERS DIRECTORY -->
+    <!-- VIEW 2: SEARCHABLE WORK ORDERS DIRECTORY -->
     <div id="historyView" class="view-panel">
-      <!-- SUMMARY METRIC STRIP FOR PAST ORDERS -->
+      <!-- SUMMARY METRIC STRIP FOR WORK ORDERS -->
       <section class="history-kpi-grid">
         <div class="kpi-card">
           <div class="kpi-header">
@@ -821,7 +829,7 @@
       <section class="history-directory-card">
         <div class="directory-top-bar">
           <div class="directory-title-wrap">
-            <h2 class="directory-title">PAST WORK ORDERS DIRECTORY</h2>
+            <h2 class="directory-title">WORK ORDERS DIRECTORY</h2>
             <p class="directory-subtitle">Search, filter, open, review, and print all manufacturing work orders</p>
           </div>
           <div class="directory-actions">
@@ -876,12 +884,12 @@
           </div>
         </div>
 
-        <!-- PAST ORDERS CARD GRID CONTAINER -->
+        <!-- WORK ORDERS CARD GRID CONTAINER -->
         <div class="history-cards-grid" id="historyCardsContainer">
           <!-- Dynamically populated card items -->
         </div>
 
-        <!-- PAST ORDERS TABLE CONTAINER (TOGGLEABLE) -->
+        <!-- WORK ORDERS TABLE CONTAINER (TOGGLEABLE) -->
         <div class="table-container history-table-wrap" id="historyTableContainer" style="display: none;">
           <table class="schedule-table history-table" id="historyTable">
             <thead>
@@ -907,7 +915,7 @@
           </table>
         </div>
       </section>
-    </div> <!-- END VIEW 2: PAST WORK ORDERS -->
+    </div> <!-- END VIEW 2: WORK ORDERS -->
 
     <!-- VIEW 3: USERS (MD only; the tab stays hidden for everyone else) -->
     <div id="usersView" class="view-panel">
@@ -943,6 +951,51 @@
         </div>
       </section>
     </div> <!-- END VIEW 3: USERS -->
+
+    <!-- VIEW 4: MONTHLY REPORT (MD only; the tab stays hidden for everyone else) -->
+    <div id="reportsView" class="view-panel">
+      <section class="history-directory-card">
+        <div class="directory-top-bar">
+          <div class="directory-title-wrap">
+            <h2 class="directory-title">MONTHLY REPORT &mdash; ORDERS &amp; VALUE</h2>
+            <p class="directory-subtitle">Grouped by order issue date. Value is quantity &times; price of every line, before GST.</p>
+          </div>
+          <div class="directory-actions report-controls">
+            <label class="report-control"><span>Period</span>
+              <select id="reportPeriod" class="form-select"></select>
+            </label>
+            <label class="report-check"><input type="checkbox" id="reportIncludeDrafts" checked /> Include drafts</label>
+          </div>
+        </div>
+
+        <div class="report-kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-header"><span class="kpi-title">ORDERS</span></div>
+            <div class="kpi-metric-val" id="reportKpiOrders">0</div>
+            <div class="kpi-metric-unit">In the selected period</div>
+          </div>
+          <div class="kpi-card highlight-kpi">
+            <div class="kpi-header"><span class="kpi-title">ORDER VALUE</span></div>
+            <div class="kpi-metric-val" id="reportKpiValue">₹0</div>
+            <div class="kpi-metric-unit">Before GST</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-header"><span class="kpi-title">AVERAGE ORDER VALUE</span></div>
+            <div class="kpi-metric-val" id="reportKpiAverage">₹0</div>
+            <div class="kpi-metric-unit">Value &divide; orders</div>
+          </div>
+        </div>
+
+        <p class="report-message" id="reportMessage" role="status"></p>
+        <div class="table-container">
+          <table class="schedule-table report-table">
+            <thead id="reportHead"></thead>
+            <tbody id="reportBody"></tbody>
+            <tfoot id="reportFoot"></tfoot>
+          </table>
+        </div>
+      </section>
+    </div> <!-- END VIEW 4: MONTHLY REPORT -->
 
   </main>
 
@@ -1194,6 +1247,36 @@
 
   <!-- EDIT WORK ORDER HEADER MODAL -->
   <!-- GST TAX INVOICE & BILL MODAL -->
+  <!-- CONFIRMATION (shared by Generate Bill and Release to Production; filled in by askConfirm() in app.js) -->
+  <div class="modal-backdrop" id="actionConfirmModal">
+    <div class="modal-dialog" style="width: 440px;">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+          </div>
+          <div>
+            <h3 id="actionConfirmTitle"></h3>
+            <p>Please confirm before continuing</p>
+          </div>
+        </div>
+        <button type="button" class="modal-close-btn" id="closeActionConfirm">&times;</button>
+      </div>
+      <div class="modal-form">
+        <p class="confirm-text" id="actionConfirmText"></p>
+        <dl class="confirm-summary" id="actionConfirmSummary"></dl>
+        <div class="modal-footer">
+          <button type="button" class="btn-cancel" id="cancelActionConfirm">Cancel</button>
+          <button type="button" class="btn-create" id="actionConfirmYes"></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-backdrop" id="taxInvoiceModal">
     <div class="modal-dialog print-preview-dialog invoice-modal-dialog">
       <div class="print-toolbar no-print">
@@ -1432,13 +1515,14 @@
   <script src="storage.js?v=2"></script>
   <script src="db.js?v=5"></script>
   <script src="users.js?v=3"></script>
-  <script src="app.js?v=15"></script>
+  <script src="reports.js?v=1"></script>
+  <script src="app.js?v=19"></script>
 
   <!-- INLINE TAB SWITCHING — Guaranteed to work independent of app.js load state -->
   <script>
     function switchMainView(viewName) {
-      var views = { workbench: 'workbenchView', history: 'historyView', users: 'usersView' };
-      var tabs = { workbench: 'tabWorkbench', history: 'tabHistory', users: 'tabUsers' };
+      var views = { workbench: 'workbenchView', history: 'historyView', users: 'usersView', reports: 'reportsView' };
+      var tabs = { workbench: 'tabWorkbench', history: 'tabHistory', users: 'tabUsers', reports: 'tabReports' };
       Object.keys(views).forEach(function (key) {
         var view = document.getElementById(views[key]);
         var tab = document.getElementById(tabs[key]);
@@ -1453,6 +1537,7 @@
       // Trigger the JS render if available
       if (viewName === 'history' && typeof renderHistoryTable === 'function') renderHistoryTable();
       else if (viewName === 'users' && typeof UsersAdmin !== 'undefined') UsersAdmin.refresh();
+      else if (viewName === 'reports' && typeof MonthlyReport !== 'undefined') MonthlyReport.refresh();
       else if (viewName === 'workbench' && typeof renderWorkOrder === 'function') renderWorkOrder();
     }
   </script>

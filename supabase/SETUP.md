@@ -56,7 +56,7 @@ small function that runs inside Supabase. Set it up once:
    app therefore sends the public key in the normal header and the person's login separately
    (`x-user-token`), and the function verifies it itself. You don't need to change any Verify JWT setting.
 
-Sign in as the MD: a **Users** tab appears next to Past Work Orders. Everyone else never sees it, and
+Sign in as the MD: a **Users** tab and a **Reports** tab (monthly orders and value) appear next to Work Orders. Everyone else never sees it, and
 the function refuses them even if they call it directly.
 
 Rules built in: you can't delete your own login, and there must always be at least one MD.

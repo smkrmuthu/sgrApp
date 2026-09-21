@@ -154,7 +154,7 @@ const SEED_WORK_ORDERS = [
 const WORK_ORDERS_DATA = OrderStore.load(Cloud.configured ? [] : SEED_WORK_ORDERS);
 
 // Index of the SAVED work order open in the Workbench; -1 = none. With none open the Workbench shows a blank
-// new work order (the draft below). Saved orders open from Past Work Orders or the Switch Order drawer.
+// new work order (the draft below). Saved orders open from Work Orders or the Switch Order drawer.
 let currentOrderIndex = -1;
 
 // A new work order that has not been saved yet. It lives only in memory: it is not in WORK_ORDERS_DATA, not in
@@ -178,6 +178,51 @@ function requireOpenOrder(allowWhileEditing) {
   }
   if (WORK_ORDERS_DATA[currentOrderIndex]) return true;
   showToast(draftOrder ? "Save this work order first (add a line item or press Save)." : "Open or create a work order first.", "error");
+  return false;
+}
+
+// Universal null-safe order search helper
+function matchesOrder(wo, query) {
+  if (!wo || !query) return false;
+  const q = String(query).toLowerCase().trim();
+  if (!q) return false;
+
+  const matchStr = (val) => val != null && String(val).toLowerCase().includes(q);
+
+  if (
+    matchStr(wo.id) ||
+    matchStr(wo.docRef) ||
+    matchStr(wo.vendorCode) ||
+    matchStr(wo.vendorSub) ||
+    matchStr(wo.destination) ||
+    matchStr(wo.destinationSub) ||
+    matchStr(wo.buyer) ||
+    matchStr(wo.customer) ||
+    matchStr(wo.status) ||
+    matchStr(wo.remarks) ||
+    matchStr(wo.issueDate) ||
+    matchStr(wo.deliveryTarget)
+  ) {
+    return true;
+  }
+
+  if (Array.isArray(wo.items)) {
+    for (const it of wo.items) {
+      if (!it) continue;
+      if (
+        matchStr(it.partNo) ||
+        matchStr(it.description) ||
+        matchStr(it.subDesc) ||
+        matchStr(it.profile) ||
+        matchStr(it.custRef) ||
+        matchStr(it.category) ||
+        matchStr(it.remarks)
+      ) {
+        return true;
+      }
+    }
+  }
+
   return false;
 }
 
@@ -278,6 +323,17 @@ function startNewWorkOrder() {
   currentOrderIndex = -1;
   document.getElementById("tabWorkbench").click();       // switches to the Workbench, which renders the draft
   setTimeout(() => { const el = document.getElementById("draftVendorCode"); if (el) el.focus(); }, 100);
+}
+
+// Helper: escape text before putting it into HTML built from strings (used by the invoice and the search box)
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 // Helper: Format Numbers with Commas
@@ -412,6 +468,16 @@ function renderWorkOrder() {
   if (headerEditUid && (!saved || saved.uid !== headerEditUid)) endHeaderEdit();   // another order was opened
   const view = document.getElementById("workbenchView");
   if (view) view.classList.toggle("is-draft", !saved);   // no saved order open: show the blank new work order
+
+  // An order that is already released (or completed) cannot be released again
+  const released = !!saved && isReleased(saved);
+  const releaseBtn = document.getElementById("releaseFloorBtn");
+  if (releaseBtn) {
+    releaseBtn.disabled = released;
+    releaseBtn.title = released ? "This work order has already been released to production" : "";
+  }
+  const releaseMenuItem = document.getElementById("menuReleaseFloor");
+  if (releaseMenuItem) releaseMenuItem.classList.toggle("is-disabled", released);
 
   // Header and Meta
   const displayWoEl = document.getElementById("displayWoNumber");
@@ -762,6 +828,124 @@ function numToWordsIndian(num) {
   return `Rupees ${words} Only`;
 }
 
+// ---------------------------------------------------------------- Confirmation dialog (shared)
+// askConfirm({ title, text, rows: [[label, value], ...], confirmLabel, onConfirm }) shows the details and only runs
+// onConfirm if the user presses the confirm button. Cancel, the x and Esc do nothing.
+let pendingConfirm = null;
+
+function askConfirm({ title, text, rows, confirmLabel, onConfirm }) {
+  document.getElementById("actionConfirmTitle").textContent = title;
+  document.getElementById("actionConfirmText").textContent = text;
+  const summary = document.getElementById("actionConfirmSummary");
+  summary.replaceChildren();
+  rows.forEach(([label, value]) => {
+    const dt = document.createElement("dt");
+    dt.textContent = label;
+    const dd = document.createElement("dd");
+    dd.textContent = value;
+    summary.append(dt, dd);
+  });
+  const yes = document.getElementById("actionConfirmYes");
+  yes.textContent = confirmLabel;
+  pendingConfirm = onConfirm;
+  document.getElementById("actionConfirmModal").classList.add("open");
+  yes.focus();
+}
+
+function closeActionConfirm() {
+  document.getElementById("actionConfirmModal").classList.remove("open");
+  pendingConfirm = null;
+}
+
+function acceptActionConfirm() {
+  const run = pendingConfirm;
+  closeActionConfirm();
+  if (run) run();
+}
+
+// Quantity and value of an order's lines, used in the confirmation summaries
+function orderTotals(order) {
+  const qty = order.items.reduce((n, it) => n + (Number(it.qty) || 0), 0);
+  const amount = order.items.reduce((n, it) => n + (Number(it.qty) || 0) * (Number(it.price) || 0), 0);
+  return { qty, amount };
+}
+
+// ---------------------------------------------------------------- Generate Bill / Invoice flow
+// Generate Bill -> confirm -> the invoice opens (GST options, print) -> closing the invoice moves on to Work Orders.
+let billFlowActive = false;
+
+function startBillFlow() {
+  if (!requireOpenOrder()) return;
+  const order = WORK_ORDERS_DATA[currentOrderIndex];
+  if (!order.items || order.items.length === 0) {
+    showToast("Add at least one line item before generating a bill.", "error");
+    const part = document.getElementById("addPartNo");
+    if (part) part.focus();
+    return;
+  }
+  const { qty, amount } = orderTotals(order);
+  askConfirm({
+    title: "Generate Bill / Invoice?",
+    text: "Check the details below. After you confirm, the invoice opens for GST options and printing, and closing it takes you to Work Orders.",
+    rows: [
+      ["Work Order", `#${order.id}`],
+      ["Vendor / Client", order.vendorCode || "—"],
+      ["Line items", String(order.items.length)],
+      ["Total quantity", `${formatNum(qty)} Nos`],
+      ["Bill value (before GST)", `₹${amount.toLocaleString("en-IN")}`]
+    ],
+    confirmLabel: "Yes, Generate Bill",
+    onConfirm: () => { billFlowActive = true; openTaxInvoiceModal(); }
+  });
+}
+
+// ---------------------------------------------------------------- Release to Production flow
+// Release -> confirm -> the order is marked released and the Workbench goes back to a blank new work order.
+// A released (or completed) order cannot be released again: its Release button stays disabled.
+function isReleased(order) {
+  const status = String((order && order.status) || "");
+  return status.startsWith("RELEASED") || status.startsWith("COMPLETED");
+}
+
+function startReleaseFlow() {
+  if (!requireOpenOrder()) return;
+  const order = WORK_ORDERS_DATA[currentOrderIndex];
+  if (isReleased(order)) {
+    showToast("This work order has already been released to production.", "error");
+    return;
+  }
+  if (!order.items || order.items.length === 0) {
+    showToast("Add at least one line item before releasing to production.", "error");
+    const part = document.getElementById("addPartNo");
+    if (part) part.focus();
+    return;
+  }
+  const { qty } = orderTotals(order);
+  askConfirm({
+    title: "Release to Production?",
+    text: "This sends the work order to the Production & Finishing floor. Once released it cannot be released again, and you will be taken to a blank page for the next work order.",
+    rows: [
+      ["Work Order", `#${order.id}`],
+      ["Vendor / Client", order.vendorCode || "—"],
+      ["Destination", order.destination || "—"],
+      ["Delivery target", order.deliveryTarget || "—"],
+      ["Line items", String(order.items.length)],
+      ["Total quantity", `${formatNum(qty)} Nos`]
+    ],
+    confirmLabel: "Yes, Release to Production",
+    onConfirm: () => releaseOrder(order.uid)
+  });
+}
+
+function releaseOrder(uid) {
+  const order = WORK_ORDERS_DATA.find((o) => o.uid === uid);
+  if (!order) return;
+  order.status = "RELEASED — IN PRODUCTION";
+  persistOrders(order);
+  showToast(`Work Order #${order.id} released to Production & Finishing Line 02!`);
+  startNewWorkOrder();                       // blank page, ready for the next work order
+}
+
 function openTaxInvoiceModal() {
   if (!requireOpenOrder()) return;
   renderTaxInvoice();
@@ -1079,13 +1263,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (menuGenBill) {
       menuGenBill.addEventListener("click", () => {
         mainMenuPanel.classList.remove("open");
-        openTaxInvoiceModal();
+        startBillFlow();
       });
     }
 
     document.getElementById("menuReleaseFloor").addEventListener("click", () => {
       mainMenuPanel.classList.remove("open");
-      document.getElementById("releaseFloorBtn").click();
+      startReleaseFlow();
     });
   }
 
@@ -1097,17 +1281,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Bill / Tax Invoice Buttons & Controls
   const btnHeaderBill = document.getElementById("btnHeaderBill");
-  if (btnHeaderBill) btnHeaderBill.addEventListener("click", openTaxInvoiceModal);
+  if (btnHeaderBill) btnHeaderBill.addEventListener("click", startBillFlow);
 
   const btnCornerBill = document.getElementById("btnCornerBill");
-  if (btnCornerBill) btnCornerBill.addEventListener("click", openTaxInvoiceModal);
+  if (btnCornerBill) btnCornerBill.addEventListener("click", startBillFlow);
 
   const closeTaxInvoiceModal = document.getElementById("closeTaxInvoiceModal");
   if (closeTaxInvoiceModal) {
     closeTaxInvoiceModal.addEventListener("click", () => {
       document.getElementById("taxInvoiceModal")?.classList.remove("open");
+      if (billFlowActive) {                                   // bill generated through the confirmed flow: move on
+        billFlowActive = false;
+        const order = WORK_ORDERS_DATA[currentOrderIndex];
+        document.getElementById("tabHistory").click();
+        if (order) showToast(`Bill / invoice generated for Work Order #${order.id}.`);
+      }
     });
   }
+
+  // Confirmation dialog (Generate Bill, Release to Production)
+  document.getElementById("actionConfirmYes").addEventListener("click", acceptActionConfirm);
+  document.getElementById("cancelActionConfirm").addEventListener("click", closeActionConfirm);
+  document.getElementById("closeActionConfirm").addEventListener("click", closeActionConfirm);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && document.getElementById("actionConfirmModal").classList.contains("open")) closeActionConfirm();
+  });
 
   const invoiceGstRate = document.getElementById("invoiceGstRate");
   if (invoiceGstRate) invoiceGstRate.addEventListener("change", renderTaxInvoice);
@@ -1190,14 +1388,7 @@ document.addEventListener("DOMContentLoaded", () => {
     showToast("Opening Print & PDF export preview...");
   });
 
-  document.getElementById("releaseFloorBtn").addEventListener("click", () => {
-    if (!requireOpenOrder()) return;
-    const order = WORK_ORDERS_DATA[currentOrderIndex];
-    order.status = "RELEASED — IN PRODUCTION";
-    persistOrders(order);
-    showToast(`Work Order #${order.id} released to Production & Finishing Line 02!`);
-    renderWorkOrder();
-  });
+  document.getElementById("releaseFloorBtn").addEventListener("click", startReleaseFlow);
 
   document.getElementById("btnReverify").addEventListener("click", () => {
     showToast("ISO Compliance & Cryptographic audit checksum re-verified OK.");
@@ -1207,16 +1398,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const searchInput = document.getElementById("globalSearchInput");
   const searchResultsDropdown = document.getElementById("globalSearchResults");
   let selectedSuggestionIndex = -1;
-
-  function escapeHtml(str) {
-    if (!str) return "";
-    return String(str)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-  }
 
   function highlightSearchText(text, q) {
     if (!text) return "";
@@ -1419,7 +1600,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const q = searchInput.value.toLowerCase().trim();
       renderSearchSuggestions(q);
 
-      // If user is currently looking at the Past Work Orders tab, also sync search to that table
+      // If user is currently looking at the Work Orders tab, also sync search to that table
       const historyView = document.getElementById("historyView");
       if (historyView && historyView.style.display !== "none") {
         const histInput = document.getElementById("historySearchInput");
@@ -1574,7 +1755,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
-// Render Past Work Orders Directory
+// Render Work Orders Directory
 function renderHistoryTable() {
   const cardsContainer = document.getElementById("historyCardsContainer");
   const tbody = document.getElementById("historyTableBody");
@@ -1690,7 +1871,7 @@ function renderHistoryTable() {
       const profilesHtml = (wo.profilesList || []).map(p => `<span class="history-profile-pill">${p}</span>`).join(" ");
 
       const card = document.createElement("div");
-      card.className = "history-card-item";
+      card.className = `history-card-item${wo.status === "DRAFT" ? " is-draft" : ""}`;
       card.innerHTML = `
         <div class="history-card-header">
           <div class="history-card-id-wrap">
@@ -1774,6 +1955,7 @@ function renderHistoryTable() {
       if (wo.status.includes("RELEASED")) statusClass = "status-released";
 
       const tr = document.createElement("tr");
+      if (wo.status === "DRAFT") tr.className = "is-draft";
       tr.innerHTML = `
         <td class="part-code-cell" style="font-weight: 800; color: var(--color-forest-900);">#${wo.id}</td>
         <td style="font-size: 11.5px;">${wo.issueDate}</td>
@@ -1871,8 +2053,9 @@ document.addEventListener("DOMContentLoaded", () => {
       currentOrderIndex = idx;   // -1 (nothing open) if no order was open or it was deleted elsewhere
       renderWorkOrder();
       renderHistoryTable();
+      MonthlyReport.refreshIfVisible();
     },
     toast: showToast,
-    onProfile: (profile) => UsersAdmin.setProfile(profile)
+    onProfile: (profile) => { UsersAdmin.setProfile(profile); MonthlyReport.setProfile(profile); }
   });
 });
