@@ -788,7 +788,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("releaseFloorBtn").addEventListener("click", () => {
     const order = WORK_ORDERS_DATA[currentOrderIndex];
     order.status = "RELEASED — IN PRODUCTION";
-    showToast(`Work Order #${order.id} released to Corrugator & Finishing Line 02!`);
+    showToast(`Work Order #${order.id} released to Production & Finishing Line 02!`);
     renderWorkOrder();
   });
 
