@@ -2666,32 +2666,6 @@ html.auth-locked body > *:not(#loginGate):not(script):not(style):not(link) {
   word-break: break-all;
 }
 
-/* Empty state: no work orders at all */
-.empty-state-card {
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 64px 16px;
-  text-align: center;
-  background: var(--color-white, #fff);
-  border-radius: var(--radius-lg, 12px);
-}
-
-.empty-state-card h2 { margin: 0; }
-.empty-state-card p { margin: 0 0 12px; color: #6b7280; }
-
-#workbenchView.is-empty > .empty-state-card { display: flex; }
-#workbenchView.is-empty > section:not(.empty-state-card),
-#workbenchView.is-empty > .bottom-dual-grid { display: none; }
-
-.empty-state-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 12px;
-}
-
 /* ---------------------------------------------------------------- Users tab (MD) */
 .users-message { margin: 0 0 8px; color: #6b7280; font-size: 13px; }
 .users-message.is-error { color: #b91c1c; }
@@ -3010,4 +2984,61 @@ html.auth-locked body > *:not(#loginGate):not(script):not(style):not(link) {
     box-shadow: none !important;
     padding: 0 !important;
   }
+}
+
+/* ---------------------------------------------------------------- New work order (unsaved draft) */
+.draft-header-card {
+  display: none;
+  background: var(--color-white);
+  border: 1px solid var(--color-kraft-200);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.draft-title-strip {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  background: #fdfbf7;
+  border-bottom: 1px solid var(--color-kraft-200);
+}
+
+.draft-title { margin: 2px 0 4px; font-size: 20px; }
+.draft-hint { margin: 0; max-width: 640px; font-size: 12px; color: #6b7280; }
+
+.draft-form { display: flex; flex-direction: column; gap: 14px; padding: 16px 18px; }
+
+.draft-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.draft-span-2 { grid-column: span 2; }
+
+.draft-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.draft-number-note { font-size: 12px; color: #6b7280; }
+
+/* while no saved order is open: the blank draft replaces the order header, totals and audit blocks */
+#workbenchView.is-draft > .draft-header-card { display: block; }
+#workbenchView.is-draft > .wo-header-card,
+#workbenchView.is-draft > .kpi-grid,
+#workbenchView.is-draft > .bottom-dual-grid,
+#workbenchView.is-draft #btnHeaderBill { display: none; }
+
+@media (max-width: 900px) {
+  .draft-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 520px) {
+  .draft-grid { grid-template-columns: 1fr; }
+  .draft-span-2 { grid-column: auto; }
 }

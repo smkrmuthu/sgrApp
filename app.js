@@ -153,59 +153,24 @@ const SEED_WORK_ORDERS = [
 // with Supabase configured, the shared database is the source of truth and there are no samples.
 const WORK_ORDERS_DATA = OrderStore.load(Cloud.configured ? [] : SEED_WORK_ORDERS);
 
-// Index of the work order open in the Workbench; -1 = none open (the Workbench shows the create/open card).
-// Orders are opened from Past Work Orders (or the Switch Order drawer) or created with New Work Order.
+// Index of the SAVED work order open in the Workbench; -1 = none. With none open the Workbench shows a blank
+// new work order (the draft below). Saved orders open from Past Work Orders or the Switch Order drawer.
 let currentOrderIndex = -1;
 
-// Guard for actions that need an open order (menu items stay clickable when none is open)
-function requireOpenOrder() {
-  if (WORK_ORDERS_DATA[currentOrderIndex]) return true;
-  showToast("Open or create a work order first.", "error");
-  return false;
+// A new work order that has not been saved yet. It lives only in memory: it is not in WORK_ORDERS_DATA, not in
+// this device's saved copy and not sent to the database until it is saved (see commitDraft). It survives
+// switching tabs or opening another order; it is lost only if the page is reloaded.
+let draftOrder = null;
+
+// The order the Workbench is showing: the open saved order, otherwise the blank draft.
+function getOpenOrder() {
+  return WORK_ORDERS_DATA[currentOrderIndex] || draftOrder;
 }
 
-// Universal null-safe order search helper
-function matchesOrder(wo, query) {
-  if (!wo || !query) return false;
-  const q = String(query).toLowerCase().trim();
-  if (!q) return false;
-
-  const matchStr = (val) => val != null && String(val).toLowerCase().includes(q);
-
-  if (
-    matchStr(wo.id) ||
-    matchStr(wo.docRef) ||
-    matchStr(wo.vendorCode) ||
-    matchStr(wo.vendorSub) ||
-    matchStr(wo.destination) ||
-    matchStr(wo.destinationSub) ||
-    matchStr(wo.buyer) ||
-    matchStr(wo.customer) ||
-    matchStr(wo.status) ||
-    matchStr(wo.remarks) ||
-    matchStr(wo.issueDate) ||
-    matchStr(wo.deliveryTarget)
-  ) {
-    return true;
-  }
-
-  if (Array.isArray(wo.items)) {
-    for (const it of wo.items) {
-      if (!it) continue;
-      if (
-        matchStr(it.partNo) ||
-        matchStr(it.description) ||
-        matchStr(it.subDesc) ||
-        matchStr(it.profile) ||
-        matchStr(it.custRef) ||
-        matchStr(it.category) ||
-        matchStr(it.remarks)
-      ) {
-        return true;
-      }
-    }
-  }
-
+// Guard for actions that need a SAVED order (print, bill, release, edit details...); menu items stay clickable.
+function requireOpenOrder() {
+  if (WORK_ORDERS_DATA[currentOrderIndex]) return true;
+  showToast(draftOrder ? "Save this work order first (add a line item or press Save)." : "Open or create a work order first.", "error");
   return false;
 }
 
@@ -224,6 +189,88 @@ function persistOrders(changedOrder) {
 function nextOrderNumber() {
   const nums = WORK_ORDERS_DATA.map(wo => parseInt(String(wo.id).split("/")[0], 10)).filter(n => !isNaN(n));
   return (nums.length ? Math.max(...nums) : 342) + 1;
+}
+
+function newDraftOrder() {
+  const day = 24 * 60 * 60 * 1000;
+  return {
+    uid: OrderStore.newUid(),
+    updatedAt: null,
+    id: "",                                   // the number is assigned when the order is saved
+    docRef: "DOC REF: SGR-MKT-02",
+    vendorCode: "",
+    vendorSub: "SGR Division // Pkg",
+    issueDate: new Date().toISOString().split("T")[0],
+    deliveryTarget: new Date(Date.now() + 5 * day).toISOString().split("T")[0],
+    deliveryChipText: "",
+    destination: "",
+    destinationSub: "Standard Logistics Line",
+    revision: "Rev 00, Dt: 01/08/22",
+    status: "DRAFT",
+    qualityGate: "TC: YES",
+    auditSteps: [
+      { id: 1, role: "Prepared by", person: "Production Planner", status: "Verified", time: "Just now", verified: true },
+      { id: 2, role: "Verified by", person: "Quality Control & Plant Head", status: "Pending", time: "-", verified: false },
+      { id: 3, role: "General Manager / JMD", person: "Executive Authorisation", status: "Pending", time: "-", verified: false },
+      { id: 4, role: "Warehouse Gate & Dispatch", person: "Vehicle Loading Inspection", status: "Pending Loading", time: "-", verified: false }
+    ],
+    items: []
+  };
+}
+
+// Puts the draft's values into the on-page form (only when a fresh draft is created, so typing is never overwritten)
+function fillDraftForm() {
+  const set = (id, value) => { const el = document.getElementById(id); if (el) el.value = value; };
+  set("draftDocRef", draftOrder.docRef);
+  set("draftVendorCode", draftOrder.vendorCode);
+  set("draftVendorSub", draftOrder.vendorSub);
+  set("draftDestination", draftOrder.destination);
+  set("draftIssueDate", draftOrder.issueDate);
+  set("draftDeliveryDate", draftOrder.deliveryTarget);
+  set("draftQualityGate", draftOrder.qualityGate.replace("TC: ", ""));
+  set("draftStatus", draftOrder.status);
+}
+
+function syncDraftFromForm() {
+  if (!draftOrder) return;
+  const get = (id) => { const el = document.getElementById(id); return el ? el.value : ""; };
+  draftOrder.docRef = get("draftDocRef").trim();
+  draftOrder.vendorCode = get("draftVendorCode").trim();
+  draftOrder.vendorSub = get("draftVendorSub").trim();
+  draftOrder.destination = get("draftDestination").trim();
+  draftOrder.issueDate = get("draftIssueDate");
+  draftOrder.deliveryTarget = get("draftDeliveryDate");
+  draftOrder.qualityGate = `TC: ${get("draftQualityGate")}`;
+  draftOrder.status = get("draftStatus");
+}
+
+function ensureDraft() {
+  if (!draftOrder) { draftOrder = newDraftOrder(); fillDraftForm(); }
+  return draftOrder;
+}
+
+// Saves the draft as a real work order: checks the required details, gives it its number, saves it (on this
+// device and to the database) and opens it. Returns false if a required detail is missing.
+function commitDraft() {
+  const form = document.getElementById("draftHeaderForm");
+  if (!draftOrder || !form || !form.reportValidity()) return false;   // the browser points at the missing field
+  syncDraftFromForm();
+  const order = draftOrder;
+  order.id = nextOrderNumber() + "/2026-27";
+  order.deliveryChipText = `${order.deliveryTarget} (New Order)`;
+  WORK_ORDERS_DATA.push(order);
+  currentOrderIndex = WORK_ORDERS_DATA.length - 1;
+  draftOrder = null;
+  persistOrders(order);
+  showToast(`Work Order #${order.id} created successfully!`);
+  return true;
+}
+
+// Shows the blank new work order in the Workbench (any half-filled draft is kept)
+function startNewWorkOrder() {
+  currentOrderIndex = -1;
+  document.getElementById("tabWorkbench").click();       // switches to the Workbench, which renders the draft
+  setTimeout(() => { const el = document.getElementById("draftVendorCode"); if (el) el.focus(); }, 100);
 }
 
 // Helper: Format Numbers with Commas
@@ -271,10 +318,11 @@ function updateOrderCounts() {
 }
 
 function renderWorkOrder() {
-  const order = WORK_ORDERS_DATA[currentOrderIndex];
+  const saved = WORK_ORDERS_DATA[currentOrderIndex];
+  if (!saved) ensureDraft();
+  const order = getOpenOrder();
   const view = document.getElementById("workbenchView");
-  if (view) view.classList.toggle("is-empty", !order);   // no orders: show the empty-state card instead of stale markup
-  if (!order) { updateOrderCounts(); return; }
+  if (view) view.classList.toggle("is-draft", !saved);   // no saved order open: show the blank new work order
 
   // Header and Meta
   const displayWoEl = document.getElementById("displayWoNumber");
@@ -322,7 +370,7 @@ function renderWorkOrder() {
         <td colspan="12" style="text-align: center; padding: 48px 16px; background: var(--color-white); color: var(--color-ink-600);">
           <div style="font-weight: 700; font-size: 14px; color: var(--color-ink-800); margin-bottom: 4px;">No Line Items in this Work Order</div>
           <div style="font-size: 12px; color: var(--color-ink-500); margin-bottom: 14px;">Key in your part numbers, dimensions, quantities, and rates below to add line items.</div>
-          <button type="button" class="btn-primary" onclick="document.getElementById('itemPartNo')?.focus()" style="padding: 7px 16px; font-size: 12px; cursor: pointer; border-radius: 4px; background: var(--color-forest-800); color: #fff; border: none; font-weight: 600;">
+          <button type="button" class="btn-primary" onclick="document.getElementById('addPartNo')?.focus()" style="padding: 7px 16px; font-size: 12px; cursor: pointer; border-radius: 4px; background: var(--color-forest-800); color: #fff; border: none; font-weight: 600;">
             + Add First Line Item
           </button>
         </td>
@@ -435,7 +483,7 @@ function renderWorkOrder() {
 
 // Render Audit Chain
 function renderAuditChain() {
-  const order = WORK_ORDERS_DATA[currentOrderIndex];
+  const order = getOpenOrder();
   if (!order || !order.auditSteps) return;
 
   order.auditSteps.forEach((step) => {
@@ -481,7 +529,8 @@ window.toggleAuditStep = function(stepId) {
 // Add Line Item
 document.getElementById("quickAddForm").addEventListener("submit", function(e) {
   e.preventDefault();
-  const order = WORK_ORDERS_DATA[currentOrderIndex];
+  const order = getOpenOrder();
+  if (order === draftOrder && !commitDraft()) return;   // a new work order is saved first (asks for any missing detail)
 
   const partNo = document.getElementById("addPartNo").value.trim();
   const desc = document.getElementById("addDesc").value.trim();
@@ -982,74 +1031,22 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("ordersDrawer").classList.remove("open");
   });
 
-  // New Work Order Modal
-  const newWoModal = document.getElementById("newWoModal");
-  document.getElementById("newWorkOrderBtn").addEventListener("click", () => {
-    const nextId = nextOrderNumber() + "/2026-27";
-    document.getElementById("newWoNum").value = `#${nextId}`;
-    const today = new Date().toISOString().split("T")[0];
-    document.getElementById("newIssueDate").value = today;
-    const future = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-    document.getElementById("newDeliveryDate").value = future;
-    newWoModal.classList.add("open");
-  });
+  // New Work Order: opens a blank draft in the Workbench. It is saved (and numbered) when the first line item
+  // is added, or when Save Work Order is pressed.
+  document.getElementById("newWorkOrderBtn").addEventListener("click", startNewWorkOrder);
 
-  document.getElementById("closeNewWoModal").addEventListener("click", () => {
-    newWoModal.classList.remove("open");
-  });
-  document.getElementById("cancelCreateWo").addEventListener("click", () => {
-    newWoModal.classList.remove("open");
-  });
-
-  document.getElementById("createWoForm").addEventListener("submit", (e) => {
+  const draftForm = document.getElementById("draftHeaderForm");
+  draftForm.addEventListener("input", syncDraftFromForm);
+  draftForm.addEventListener("change", syncDraftFromForm);
+  draftForm.addEventListener("submit", (e) => {
     e.preventDefault();
-    const woNum = document.getElementById("newWoNum").value.replace("#", "").trim();
-    const docRef = document.getElementById("newDocRef").value.trim();
-    const vendorCode = document.getElementById("newVendorCode").value.trim();
-    const vendorSub = document.getElementById("newVendorSub").value.trim();
-    const issueDate = document.getElementById("newIssueDate").value;
-    const deliveryDate = document.getElementById("newDeliveryDate").value;
-    const destination = document.getElementById("newDestination").value.trim();
-    const qualityGate = document.getElementById("newQualityGate").value;
-    const status = document.getElementById("newStatus").value;
-
-    const newOrder = {
-      uid: OrderStore.newUid(),
-      updatedAt: null,
-      id: woNum,
-      docRef: docRef,
-      vendorCode: vendorCode,
-      vendorSub: vendorSub,
-      issueDate: issueDate,
-      deliveryTarget: deliveryDate,
-      deliveryChipText: `${deliveryDate} (New Order)`,
-      destination: destination,
-      destinationSub: "Standard Logistics Line",
-      revision: "Rev 00, Dt: 01/08/22",
-      status: status,
-      qualityGate: `TC: ${qualityGate}`,
-      auditSteps: [
-        { id: 1, role: "Prepared by", person: "Production Planner", status: "Verified", time: "Just now", verified: true },
-        { id: 2, role: "Verified by", person: "Quality Control & Plant Head", status: "Pending", time: "-", verified: false },
-        { id: 3, role: "General Manager / JMD", person: "Executive Authorisation", status: "Pending", time: "-", verified: false },
-        { id: 4, role: "Warehouse Gate & Dispatch", person: "Vehicle Loading Inspection", status: "Pending Loading", time: "-", verified: false }
-      ],
-      items: []
-    };
-
-    WORK_ORDERS_DATA.push(newOrder);
-    currentOrderIndex = WORK_ORDERS_DATA.length - 1;
-    persistOrders(newOrder);
+    if (!commitDraft()) return;
     renderWorkOrder();
-    document.getElementById("tabWorkbench").click();   // e.g. created from Past Work Orders: show the new order
-    newWoModal.classList.remove("open");
-    showToast(`Work Order #${woNum} created successfully!`);
-
-    // Auto-focus on Part # input to key in first item immediately
-    setTimeout(() => {
-      const partInput = document.getElementById("addPartNo");
-      if (partInput) partInput.focus();
-    }, 200);
+    const partInput = document.getElementById("addPartNo");
+    if (partInput) partInput.focus();                 // straight on to the first line item
+  });
+  document.getElementById("draftOpenPast").addEventListener("click", () => {
+    document.getElementById("tabHistory").click();
   });
 
   // Edit Line Item Modal Handlers

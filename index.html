@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=10" />
+  <link rel="stylesheet" href="style.css?v=11" />
 </head>
 <body>
   <!-- TOP APP BAR -->
@@ -197,16 +197,63 @@
 
     <!-- VIEW 1: ACTIVE WORKBENCH -->
     <div id="workbenchView" class="view-panel active">
-      <!-- shown while no work order is open (see .is-empty in style.css) -->
-      <section class="empty-state-card" id="emptyState">
-        <h2>Create a Work Order</h2>
-        <p>Start a new work order, or open an existing one from Past Work Orders.</p>
-        <div class="empty-state-actions">
-          <button type="button" class="action-btn action-primary" onclick="document.getElementById('newWorkOrderBtn').click()">+ New Work Order</button>
-          <button type="button" class="action-btn" onclick="document.getElementById('tabHistory').click()">Open from Past Work Orders</button>
+      <!-- NEW WORK ORDER (unsaved draft): shown instead of the order header while no saved order is open -->
+      <section class="draft-header-card" id="draftHeaderCard">
+        <div class="draft-title-strip">
+          <div>
+            <span class="wo-label">New Work Order</span>
+            <h1 class="draft-title">Not saved yet</h1>
+            <p class="draft-hint">Fill in the details, then add the first line item below. The work order is saved and numbered when you add the first line or press Save.</p>
+          </div>
+          <button type="button" class="action-btn" id="draftOpenPast">Open from Past Work Orders</button>
         </div>
+        <form id="draftHeaderForm" class="draft-form" autocomplete="off">
+          <div class="draft-grid">
+            <div class="form-group">
+              <label for="draftVendorCode">Vendor / Client Code *</label>
+              <input type="text" id="draftVendorCode" class="form-control" required />
+            </div>
+            <div class="form-group draft-span-2">
+              <label for="draftDestination">Delivery Destination / Consignee *</label>
+              <input type="text" id="draftDestination" placeholder="e.g. Coimbatore // TexAuto Pack" class="form-control" required />
+            </div>
+            <div class="form-group">
+              <label for="draftVendorSub">Division / Sub-category</label>
+              <input type="text" id="draftVendorSub" class="form-control" />
+            </div>
+            <div class="form-group">
+              <label for="draftIssueDate">Order Date *</label>
+              <input type="date" id="draftIssueDate" class="form-control" required />
+            </div>
+            <div class="form-group">
+              <label for="draftDeliveryDate">Delivery Target Date *</label>
+              <input type="date" id="draftDeliveryDate" class="form-control" required />
+            </div>
+            <div class="form-group">
+              <label for="draftDocRef">Doc Reference *</label>
+              <input type="text" id="draftDocRef" class="form-control" required />
+            </div>
+            <div class="form-group">
+              <label for="draftQualityGate">Quality Gate Test Cert</label>
+              <select id="draftQualityGate" class="form-control">
+                <option value="YES">TC: YES (Mandatory)</option>
+                <option value="NO">TC: OPTIONAL</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="draftStatus">Initial Status</label>
+              <select id="draftStatus" class="form-control">
+                <option value="DRAFT">DRAFT</option>
+                <option value="CONFIRMED — READY FOR FLOOR">CONFIRMED — READY FOR FLOOR</option>
+              </select>
+            </div>
+          </div>
+          <div class="draft-actions">
+            <span class="draft-number-note">The work order number is assigned when it is saved.</span>
+            <button type="submit" class="action-btn action-primary" id="draftSave">Save Work Order</button>
+          </div>
+        </form>
       </section>
-
 
     <!-- WORK ORDER HEADER & ACTIONS RIBBON -->
     <section class="wo-header-card">
@@ -1021,90 +1068,6 @@
   </div>
 
   <!-- NEW WORK ORDER MODAL -->
-  <div class="modal-backdrop" id="newWoModal">
-    <div class="modal-dialog">
-      <div class="modal-header">
-        <div class="modal-title-wrap">
-          <div class="modal-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-              <polyline points="14 2 14 8 20 8"/>
-              <line x1="12" y1="18" x2="12" y2="12"/>
-              <line x1="9" y1="15" x2="15" y2="15"/>
-            </svg>
-          </div>
-          <div>
-            <h3>Create New Work Order</h3>
-            <p>SGR Moulds India Pvt Ltd — Manufacturing Order Generation</p>
-          </div>
-        </div>
-        <button class="modal-close-btn" id="closeNewWoModal">&times;</button>
-      </div>
-      
-      <form id="createWoForm" class="modal-form">
-        <div class="form-row-2">
-          <div class="form-group">
-            <label>Work Order Number</label>
-            <input type="text" id="newWoNum" value="#344/2026-27" class="form-control" required />
-          </div>
-          <div class="form-group">
-            <label>Doc Reference</label>
-            <input type="text" id="newDocRef" value="DOC REF: SGR-MKT-02" class="form-control" required />
-          </div>
-        </div>
-
-        <div class="form-row-2">
-          <div class="form-group">
-            <label>Vendor / Client Code</label>
-            <input type="text" id="newVendorCode" value="CCPB00005" class="form-control" required />
-          </div>
-          <div class="form-group">
-            <label>Division / Sub-category</label>
-            <input type="text" id="newVendorSub" value="SGR Division // Pkg" class="form-control" />
-          </div>
-        </div>
-
-        <div class="form-row-2">
-          <div class="form-group">
-            <label>Order Date</label>
-            <input type="date" id="newIssueDate" class="form-control" required />
-          </div>
-          <div class="form-group">
-            <label>Delivery Target Date</label>
-            <input type="date" id="newDeliveryDate" class="form-control" required />
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>Delivery Destination / Consignee</label>
-          <input type="text" id="newDestination" placeholder="e.g. Coimbatore // TexAuto Pack" class="form-control" required />
-        </div>
-
-        <div class="form-row-2">
-          <div class="form-group">
-            <label>Quality Gate Test Cert</label>
-            <select id="newQualityGate" class="form-control">
-              <option value="YES">TC: YES (Mandatory)</option>
-              <option value="NO">TC: OPTIONAL</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Initial Status</label>
-            <select id="newStatus" class="form-control">
-              <option value="DRAFT">DRAFT</option>
-              <option value="CONFIRMED — READY FOR FLOOR">CONFIRMED — READY FOR FLOOR</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button type="button" class="btn-cancel" id="cancelCreateWo">Cancel</button>
-          <button type="submit" class="btn-create">Create & Open Workbench</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
   <!-- EDIT LINE ITEM MODAL -->
   <div class="modal-backdrop" id="editItemModal">
     <div class="modal-dialog">
@@ -1521,7 +1484,7 @@
   <script src="storage.js?v=2"></script>
   <script src="db.js?v=4"></script>
   <script src="users.js?v=3"></script>
-  <script src="app.js?v=12"></script>
+  <script src="app.js?v=13"></script>
 
   <!-- INLINE TAB SWITCHING — Guaranteed to work independent of app.js load state -->
   <script>
