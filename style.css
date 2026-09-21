@@ -299,11 +299,12 @@ button, input, select, textarea {
 .header-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  flex-shrink: 0;
 }
 
 .icon-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
   background: rgba(255, 255, 255, 0.08);
@@ -315,6 +316,13 @@ button, input, select, textarea {
   font-size: 12px;
   font-weight: 600;
   transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.icon-btn svg {
+  width: 15px !important;
+  height: 15px !important;
+  flex-shrink: 0;
 }
 
 .icon-btn:hover {
@@ -332,12 +340,102 @@ button, input, select, textarea {
   background: var(--color-forest-500);
 }
 
+/* Menu Dropdown Component */
+.menu-dropdown-wrap {
+  position: relative;
+}
+
+.menu-trigger-btn {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--color-forest-500);
+}
+
+.menu-trigger-btn .dropdown-arrow {
+  width: 12px !important;
+  height: 12px !important;
+  opacity: 0.8;
+  margin-left: 2px;
+}
+
+.menu-dropdown-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 240px;
+  background: var(--color-white);
+  border: 1px solid var(--color-kraft-300);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xl);
+  padding: 6px 0;
+  display: none;
+  flex-direction: column;
+  z-index: 250;
+  animation: modalScale 0.15s ease-out;
+}
+
+.menu-dropdown-panel.open {
+  display: flex;
+}
+
+.menu-group-title {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  color: var(--color-ink-500);
+  padding: 6px 14px 2px;
+  text-transform: uppercase;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-ink-900);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.menu-item svg {
+  width: 15px !important;
+  height: 15px !important;
+  color: var(--color-forest-700);
+  flex-shrink: 0;
+}
+
+.menu-item:hover {
+  background: var(--color-forest-50);
+  color: var(--color-forest-900);
+}
+
+.menu-item.text-danger {
+  color: var(--color-rose-600);
+}
+
+.menu-item.text-danger svg {
+  color: var(--color-rose-600);
+}
+
+.menu-item.text-danger:hover {
+  background: #fef2f2;
+}
+
+.menu-divider {
+  height: 1px;
+  background: var(--color-kraft-200);
+  margin: 4px 0;
+}
+
 .user-profile-badge {
   display: flex;
   align-items: center;
   gap: 8px;
   padding-left: 8px;
   border-left: 1px solid var(--color-forest-700);
+  flex-shrink: 0;
 }
 
 .avatar {

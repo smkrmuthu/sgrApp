@@ -560,14 +560,62 @@ function openOrdersDrawer() {
 document.addEventListener("DOMContentLoaded", () => {
   renderWorkOrder();
 
+  // Main Menu Dropdown
+  const mainMenuBtn = document.getElementById("mainMenuBtn");
+  const mainMenuPanel = document.getElementById("mainMenuPanel");
+
+  if (mainMenuBtn && mainMenuPanel) {
+    mainMenuBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      mainMenuPanel.classList.toggle("open");
+    });
+
+    document.addEventListener("click", () => {
+      mainMenuPanel.classList.remove("open");
+    });
+
+    mainMenuPanel.addEventListener("click", (e) => {
+      e.stopPropagation();
+    });
+
+    document.getElementById("menuSwitchOrder").addEventListener("click", () => {
+      mainMenuPanel.classList.remove("open");
+      openOrdersDrawer();
+    });
+
+    document.getElementById("menuNewOrder").addEventListener("click", () => {
+      mainMenuPanel.classList.remove("open");
+      document.getElementById("newWorkOrderBtn").click();
+    });
+
+    document.getElementById("menuEditHeader").addEventListener("click", () => {
+      mainMenuPanel.classList.remove("open");
+      document.getElementById("editOrderHeaderBtn").click();
+    });
+
+    document.getElementById("menuPrintMemo").addEventListener("click", () => {
+      mainMenuPanel.classList.remove("open");
+      openPrintMemoModal();
+    });
+
+    document.getElementById("menuExportPdf").addEventListener("click", () => {
+      mainMenuPanel.classList.remove("open");
+      openPrintMemoModal();
+    });
+
+    document.getElementById("menuReleaseFloor").addEventListener("click", () => {
+      mainMenuPanel.classList.remove("open");
+      document.getElementById("releaseFloorBtn").click();
+    });
+  }
+
   // Print Memo Button
   document.getElementById("printMemoBtn").addEventListener("click", openPrintMemoModal);
   document.getElementById("closePrintModal").addEventListener("click", () => {
     document.getElementById("printMemoModal").classList.remove("open");
   });
 
-  // Orders Drawer
-  document.getElementById("orderDrawerBtn").addEventListener("click", openOrdersDrawer);
+  // Orders Drawer Close
   document.getElementById("closeDrawerBtn").addEventListener("click", () => {
     document.getElementById("ordersDrawer").classList.remove("open");
   });

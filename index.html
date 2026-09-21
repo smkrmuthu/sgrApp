@@ -56,19 +56,73 @@
     </div>
 
     <div class="header-right">
-      <button class="icon-btn" id="orderDrawerBtn" title="View All Work Orders">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M4 6h16M4 12h16M4 18h7" />
-        </svg>
-        <span class="btn-label">Orders (<span id="totalOrdersCount">3</span>)</span>
-      </button>
-
-      <button class="icon-btn highlight-btn" id="newWorkOrderBtn">
+      <button class="icon-btn highlight-btn" id="newWorkOrderBtn" title="Create New Work Order">
         <svg viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
           <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
         </svg>
         <span class="btn-label">New Work Order</span>
       </button>
+
+      <!-- MENU DROPDOWN -->
+      <div class="menu-dropdown-wrap">
+        <button class="icon-btn menu-trigger-btn" id="mainMenuBtn" title="Menu & Actions">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+            <path d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+          <span class="btn-label">Menu</span>
+          <svg viewBox="0 0 20 20" fill="currentColor" class="w-3 h-3 dropdown-arrow">
+            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+          </svg>
+        </button>
+
+        <div class="menu-dropdown-panel" id="mainMenuPanel">
+          <div class="menu-group-title">WORK ORDERS</div>
+          <a class="menu-item" id="menuSwitchOrder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+              <path d="M4 6h16M4 12h16M4 18h7" />
+            </svg>
+            <span>Switch Order (<strong id="menuOrdersCount">3 Active</strong>)</span>
+          </a>
+          <a class="menu-item" id="menuNewOrder">
+            <svg viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+              <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
+            </svg>
+            <span>Create New Work Order</span>
+          </a>
+
+          <div class="menu-divider"></div>
+          <div class="menu-group-title">ACTIONS</div>
+          <a class="menu-item" id="menuEditHeader">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+            <span>Edit Order Details</span>
+          </a>
+          <a class="menu-item" id="menuPrintMemo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+              <path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/>
+              <path d="M6 14h12v8H6z"/>
+            </svg>
+            <span>Print Internal Memo</span>
+          </a>
+          <a class="menu-item" id="menuExportPdf">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+            </svg>
+            <span>Export EDI / PDF</span>
+          </a>
+
+          <div class="menu-divider"></div>
+          <a class="menu-item text-danger" id="menuReleaseFloor">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+            <span>Release to Corrugator</span>
+          </a>
+        </div>
+      </div>
 
       <div class="user-profile-badge">
         <div class="avatar">PL</div>
