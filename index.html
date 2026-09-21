@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=7" />
+  <link rel="stylesheet" href="style.css?v=8" />
 </head>
 <body>
   <!-- TOP APP BAR -->
@@ -118,6 +118,15 @@
               <polyline points="14 2 14 8 20 8"></polyline>
             </svg>
             <span>Export EDI / PDF</span>
+          </a>
+          <a class="menu-item" id="menuGenerateBill">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+            <span>Generate GST Tax Invoice / Bill</span>
           </a>
 
           <div class="menu-divider"></div>
@@ -384,9 +393,20 @@
           <h2 class="section-title">MANUFACTURE ITEM SCHEDULE</h2>
           <span class="section-subtitle">Edgeboard & Corner Protector Production Line</span>
         </div>
-        <div class="legend-pills">
-          <span class="legend-item"><span class="legend-box spec-custom"></span> Special Spec Flag</span>
-          <span class="legend-item"><span class="legend-box spec-standard"></span> Standard Kraft Spec</span>
+        <div class="schedule-header-actions">
+          <div class="legend-pills">
+            <span class="legend-item"><span class="legend-box spec-custom"></span> Special Spec Flag</span>
+            <span class="legend-item"><span class="legend-box spec-standard"></span> Standard Kraft Spec</span>
+          </div>
+          <button type="button" class="btn-generate-bill" id="btnHeaderBill" title="Generate GST Tax Invoice / Commercial Bill">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+            <span>Generate Bill / Invoice</span>
+          </button>
         </div>
       </div>
 
@@ -426,6 +446,24 @@
             </tr>
           </tfoot>
         </table>
+      </div>
+
+      <!-- TABLE CORNER ACTION BAR -->
+      <div class="table-corner-bar">
+        <div class="table-corner-hints">
+          <span>⚡ <strong>Tip:</strong> Press <kbd>Enter</kbd> to rapidly add consecutive line items.</span>
+        </div>
+        <div class="table-corner-actions">
+          <button type="button" class="btn-corner-bill" id="btnCornerBill" title="Generate GST Tax Invoice / Commercial Bill for this Work Order">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+            <span>🧾 Generate Bill / Tax Invoice</span>
+          </button>
+        </div>
       </div>
 
       <!-- QUICK LINE ADD ROW FORM -->
@@ -1261,6 +1299,50 @@
     </div>
   </div>
 
+  <!-- GST TAX INVOICE & BILL MODAL -->
+  <div class="modal-backdrop" id="taxInvoiceModal">
+    <div class="modal-dialog print-preview-dialog invoice-modal-dialog">
+      <div class="print-toolbar no-print">
+        <div class="toolbar-title">
+          <span style="font-weight: 700;">GST Tax Invoice & Commercial Bill</span>
+        </div>
+        <div class="toolbar-controls">
+          <div class="invoice-gst-toggle">
+            <label>GST Rate:</label>
+            <select id="invoiceGstRate" class="form-select-sm">
+              <option value="18" selected>18% (Standard Kraft)</option>
+              <option value="12">12%</option>
+              <option value="5">5%</option>
+              <option value="0">0% (Exempt)</option>
+            </select>
+          </div>
+          <div class="invoice-gst-toggle">
+            <label>Supply Type:</label>
+            <select id="invoiceSupplyType" class="form-select-sm">
+              <option value="intra" selected>Intra-State (CGST + SGST)</option>
+              <option value="inter">Inter-State (IGST)</option>
+            </select>
+          </div>
+        </div>
+        <div class="toolbar-actions">
+          <button class="action-btn action-primary" onclick="printInvoiceDoc()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+              <path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/>
+              <path d="M6 14h12v8H6z"/>
+            </svg>
+            Print Tax Invoice
+          </button>
+          <button class="btn-cancel" id="closeTaxInvoiceModal">Close</button>
+        </div>
+      </div>
+
+      <!-- INVOICE SHEET CONTAINER -->
+      <div class="paper-sheet invoice-sheet" id="invoiceSheetContent">
+        <!-- Rendered dynamically by app.js renderTaxInvoice() -->
+      </div>
+    </div>
+  </div>
+
   <!-- PIXEL-PERFECT PRINT MEMO MODAL (MATCHES SGR-MKT-02 PAPER SCAN) -->
   <div class="modal-backdrop" id="printMemoModal">
     <div class="modal-dialog print-preview-dialog">
@@ -1456,7 +1538,7 @@
   <script src="storage.js?v=2"></script>
   <script src="db.js?v=4"></script>
   <script src="users.js?v=3"></script>
-  <script src="app.js?v=9"></script>
+  <script src="app.js?v=10"></script>
 
   <!-- INLINE TAB SWITCHING — Guaranteed to work independent of app.js load state -->
   <script>

@@ -515,12 +515,45 @@ document.getElementById("quickAddForm").addEventListener("submit", function(e) {
   renderWorkOrder();
   showToast(`Item ${partNo} added to Work Order #${order.id}!`);
 
-  // Clear inputs partially
+  // Clear inputs and auto-focus back to addPartNo for fast consecutive entry
   document.getElementById("addPartNo").value = "";
   document.getElementById("addDesc").value = "";
   document.getElementById("addRemarks").value = "";
   document.getElementById("addCustRef").value = "";
+  setTimeout(() => {
+    const partInput = document.getElementById("addPartNo");
+    if (partInput) partInput.focus();
+  }, 50);
 });
+
+// Smart Description Parser & Auto-Calculator on Quick Add
+const addDescInput = document.getElementById("addDesc");
+if (addDescInput) {
+  addDescInput.addEventListener("input", () => {
+    const val = addDescInput.value;
+    // Extract length if typed like 1200 mm or X 1200 or 1200
+    const lenMatch = val.match(/X\s*(\d{3,4})\s*(mm)?/i) || val.match(/(\d{3,4})\s*mm/i);
+    if (lenMatch && lenMatch[1]) {
+      const len = parseInt(lenMatch[1], 10);
+      if (len >= 100 && len <= 6000) {
+        document.getElementById("addLengthMm").value = len;
+        const qty = parseInt(document.getElementById("addQty")?.value, 10) || 1000;
+        document.getElementById("addWeight").value = Math.round(qty * (len / 1000) * 0.65);
+      }
+    }
+
+    // Auto-generate Part # if empty
+    const partInput = document.getElementById("addPartNo");
+    if (partInput && !partInput.value.trim()) {
+      const matchNums = val.match(/(\d+)\s*X\s*(\d+)\s*X\s*(\d+)/i);
+      if (matchNums) {
+        const w1 = matchNums[1].padStart(2, '0');
+        const th = matchNums[3].padStart(2, '0');
+        partInput.value = `EB${w1}${th}0001`;
+      }
+    }
+  });
+}
 
 // Delete Item
 window.deleteItem = function(index) {
@@ -565,6 +598,198 @@ window.editItem = function(index) {
   document.getElementById("editRemarks").value = item.remarks || "";
 
   document.getElementById("editItemModal").classList.add("open");
+};
+
+// ---------------------------------------------------------------- GST TAX INVOICE & COMMERCIAL BILL
+function numToWordsIndian(num) {
+  if (!num || isNaN(num) || num <= 0) return "Rupees Zero Only";
+  const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+  function inWords(n) {
+    if ((n = n.toString()).length > 9) return 'overflow';
+    const n_array = ('000000000' + n).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+    if (!n_array) return '';
+    let str = '';
+    str += (n_array[1] != 0) ? (a[Number(n_array[1])] || b[n_array[1][0]] + ' ' + a[n_array[1][1]]) + 'Crore ' : '';
+    str += (n_array[2] != 0) ? (a[Number(n_array[2])] || b[n_array[2][0]] + ' ' + a[n_array[2][1]]) + 'Lakh ' : '';
+    str += (n_array[3] != 0) ? (a[Number(n_array[3])] || b[n_array[3][0]] + ' ' + a[n_array[3][1]]) + 'Thousand ' : '';
+    str += (n_array[4] != 0) ? (a[Number(n_array[4])] || b[n_array[4][0]] + ' ' + a[n_array[4][1]]) + 'Hundred ' : '';
+    str += (n_array[5] != 0) ? ((str != '') ? 'and ' : '') + (a[Number(n_array[5])] || b[n_array[5][0]] + ' ' + a[n_array[5][1]]) : '';
+    return str;
+  }
+
+  const whole = Math.floor(num);
+  const words = inWords(whole).trim();
+  return `Rupees ${words} Only`;
+}
+
+function openTaxInvoiceModal() {
+  if (!requireOpenOrder()) return;
+  renderTaxInvoice();
+  const modal = document.getElementById("taxInvoiceModal");
+  if (modal) modal.classList.add("open");
+}
+
+function renderTaxInvoice() {
+  if (!WORK_ORDERS_DATA[currentOrderIndex]) return;
+  const order = WORK_ORDERS_DATA[currentOrderIndex];
+  const sheet = document.getElementById("invoiceSheetContent");
+  if (!sheet) return;
+
+  const gstRate = parseFloat(document.getElementById("invoiceGstRate")?.value || "18");
+  const supplyType = document.getElementById("invoiceSupplyType")?.value || "intra";
+
+  let taxableValue = 0;
+  let totalQty = 0;
+  let totalWeight = 0;
+
+  const rowsHtml = (order.items || []).map((it, idx) => {
+    const q = Number(it.qty) || 0;
+    const p = Number(it.price) || 0;
+    const amount = q * p;
+    taxableValue += amount;
+    totalQty += q;
+    totalWeight += Number(it.weight) || 0;
+
+    return `
+      <tr>
+        <td style="text-align: center;">${idx + 1}</td>
+        <td>
+          <div style="font-weight: 700; color: #111827;">${escapeHtml(it.description || it.partNo || 'Standard Edgeboard')}</div>
+          <div style="font-size: 11px; color: #6b7280;">Part Code: ${escapeHtml(it.partNo || '-')} // ${escapeHtml(it.subDesc || '')}</div>
+        </td>
+        <td style="text-align: center; font-family: monospace;">4819</td>
+        <td style="text-align: center; font-weight: 700; font-family: monospace;">${formatNum(q)} ${escapeHtml(it.uom || 'NOS')}</td>
+        <td style="text-align: right; font-family: monospace;">₹${p.toFixed(2)}</td>
+        <td style="text-align: right; font-weight: 700; font-family: monospace;">₹${formatNum(amount)}</td>
+      </tr>
+    `;
+  }).join("");
+
+  const cgstRate = gstRate / 2;
+  const sgstRate = gstRate / 2;
+  const cgstAmount = supplyType === "intra" ? Math.round(taxableValue * (cgstRate / 100)) : 0;
+  const sgstAmount = supplyType === "intra" ? Math.round(taxableValue * (sgstRate / 100)) : 0;
+  const igstAmount = supplyType === "inter" ? Math.round(taxableValue * (gstRate / 100)) : 0;
+  const totalTax = cgstAmount + sgstAmount + igstAmount;
+  const grandTotal = taxableValue + totalTax;
+
+  const invoiceNo = `SGR/INV/2026-27/${String(order.id || '000').replace(/[^0-9]/g, '').slice(-4).padStart(4, '0')}`;
+  const today = new Date().toLocaleDateString("en-GB", { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  sheet.innerHTML = `
+    <div class="invoice-header-grid">
+      <div class="invoice-company-brand">
+        <h1>SGR MOULDS INDIA PVT LTD</h1>
+        <div class="invoice-company-sub">
+          <strong>Manufacturer of Edgeboards & Protective Packaging</strong><br />
+          Plot No. 44 & 45, SIPCOT Industrial Growth Centre, Perundurai, Erode - 638052, Tamil Nadu<br />
+          <strong>GSTIN:</strong> 33AAACS9821K1Z2 &nbsp;|&nbsp; <strong>State Code:</strong> 33 (Tamil Nadu)<br />
+          <strong>Email:</strong> accounts@sgrmoulds.in &nbsp;|&nbsp; <strong>Phone:</strong> +91 4294 234500
+        </div>
+      </div>
+      <div class="invoice-badge-title">
+        <h2>TAX INVOICE</h2>
+        <div class="invoice-tag-sub">ORIGINAL FOR RECIPIENT</div>
+        <div style="font-family: monospace; font-size: 11px; margin-top: 4px; color: #4b5563;">Rule 46 of CGST Rules, 2017</div>
+      </div>
+    </div>
+
+    <div class="invoice-meta-grid">
+      <div class="invoice-meta-col">
+        <p><strong>Invoice No:</strong> <span style="font-family: monospace; color: #064e3b; font-weight: 700;">${invoiceNo}</span></p>
+        <p><strong>Invoice Date:</strong> ${today}</p>
+        <p><strong>Work Order Ref:</strong> #${escapeHtml(order.id)}</p>
+        <p><strong>Doc Ref:</strong> ${escapeHtml(order.docRef || 'SGR-MKT-02')}</p>
+        <p><strong>Vendor Code:</strong> ${escapeHtml(order.vendorCode || '-')}</p>
+      </div>
+      <div class="invoice-meta-col">
+        <p><strong>Buyer / Consignee:</strong></p>
+        <p style="font-size: 13px; font-weight: 700; color: #111827;">${escapeHtml(order.destination || 'Direct Consignee Delivery')}</p>
+        <p><strong>Delivery Target:</strong> ${escapeHtml(order.deliveryTarget || '-')}</p>
+        <p><strong>Place of Supply:</strong> ${supplyType === 'intra' ? 'Tamil Nadu (33)' : 'Inter-State Delivery'}</p>
+        <p><strong>Dispatch Line:</strong> ${escapeHtml(order.destinationSub || 'Dedicated Truck Line')}</p>
+      </div>
+    </div>
+
+    <table class="invoice-table">
+      <thead>
+        <tr>
+          <th style="width: 40px; text-align: center;">S.No</th>
+          <th>Description of Goods / Item Specifications</th>
+          <th style="width: 70px; text-align: center;">HSN/SAC</th>
+          <th style="width: 100px; text-align: center;">Qty / UOM</th>
+          <th style="width: 90px; text-align: right;">Rate (₹)</th>
+          <th style="width: 110px; text-align: right;">Amount (₹)</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rowsHtml || '<tr><td colspan="6" style="text-align: center; padding: 24px;">No line items in this work order</td></tr>'}
+      </tbody>
+    </table>
+
+    <div class="invoice-calculation-grid">
+      <div class="invoice-bank-card">
+        <h4>Bank Account & Remittance Details</h4>
+        <p><strong>Account Name:</strong> SGR MOULDS INDIA PRIVATE LIMITED</p>
+        <p><strong>Bank:</strong> State Bank of India, SIPCOT Perundurai Branch</p>
+        <p><strong>Account No:</strong> 38290192840 (Current A/c)</p>
+        <p><strong>IFSC Code:</strong> SBIN0001234 &nbsp;|&nbsp; <strong>Branch Code:</strong> 01234</p>
+        <p style="margin-top: 8px; font-size: 11px; color: #6b7280;">Terms: 100% payment against dispatch delivery note.</p>
+      </div>
+
+      <div class="invoice-totals-box">
+        <div class="invoice-total-row">
+          <span>Total Taxable Amount:</span>
+          <span style="font-family: monospace; font-weight: 700;">₹${formatNum(taxableValue)}</span>
+        </div>
+        ${supplyType === 'intra' ? `
+          <div class="invoice-total-row">
+            <span>CGST (${cgstRate}%):</span>
+            <span style="font-family: monospace;">₹${formatNum(cgstAmount)}</span>
+          </div>
+          <div class="invoice-total-row">
+            <span>SGST (${sgstRate}%):</span>
+            <span style="font-family: monospace;">₹${formatNum(sgstAmount)}</span>
+          </div>
+        ` : `
+          <div class="invoice-total-row">
+            <span>IGST (${gstRate}%):</span>
+            <span style="font-family: monospace;">₹${formatNum(igstAmount)}</span>
+          </div>
+        `}
+        <div class="invoice-total-row grand-total">
+          <span>Total Invoice Amount (INR):</span>
+          <span>₹${formatNum(grandTotal)}</span>
+        </div>
+        <div class="invoice-words-row">
+          <strong>Amount in Words:</strong><br />
+          ${numToWordsIndian(grandTotal)}
+        </div>
+      </div>
+    </div>
+
+    <div class="invoice-footer-signatures">
+      <div class="invoice-sign-box">
+        <div class="invoice-sign-line"></div>
+        <div class="invoice-sign-label">Customer / Receiver Signature</div>
+      </div>
+      <div class="invoice-sign-box" style="text-align: right;">
+        <div style="font-size: 11px; font-weight: 700; color: #064e3b; margin-bottom: 24px;">For SGR MOULDS INDIA PVT LTD</div>
+        <div class="invoice-sign-line"></div>
+        <div class="invoice-sign-label">Authorised Signatory / General Manager</div>
+      </div>
+    </div>
+  `;
+}
+
+window.printInvoiceDoc = function() {
+  document.body.classList.add("printing-invoice");
+  window.print();
+  setTimeout(() => {
+    document.body.classList.remove("printing-invoice");
+  }, 1000);
 };
 
 // Populate & Show Physical Print Memo Modal (Doc Ref: SGR-MKT-02)
@@ -712,6 +937,14 @@ document.addEventListener("DOMContentLoaded", () => {
       openPrintMemoModal();
     });
 
+    const menuGenBill = document.getElementById("menuGenerateBill");
+    if (menuGenBill) {
+      menuGenBill.addEventListener("click", () => {
+        mainMenuPanel.classList.remove("open");
+        openTaxInvoiceModal();
+      });
+    }
+
     document.getElementById("menuReleaseFloor").addEventListener("click", () => {
       mainMenuPanel.classList.remove("open");
       document.getElementById("releaseFloorBtn").click();
@@ -723,6 +956,26 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("closePrintModal").addEventListener("click", () => {
     document.getElementById("printMemoModal").classList.remove("open");
   });
+
+  // Bill / Tax Invoice Buttons & Controls
+  const btnHeaderBill = document.getElementById("btnHeaderBill");
+  if (btnHeaderBill) btnHeaderBill.addEventListener("click", openTaxInvoiceModal);
+
+  const btnCornerBill = document.getElementById("btnCornerBill");
+  if (btnCornerBill) btnCornerBill.addEventListener("click", openTaxInvoiceModal);
+
+  const closeTaxInvoiceModal = document.getElementById("closeTaxInvoiceModal");
+  if (closeTaxInvoiceModal) {
+    closeTaxInvoiceModal.addEventListener("click", () => {
+      document.getElementById("taxInvoiceModal")?.classList.remove("open");
+    });
+  }
+
+  const invoiceGstRate = document.getElementById("invoiceGstRate");
+  if (invoiceGstRate) invoiceGstRate.addEventListener("change", renderTaxInvoice);
+
+  const invoiceSupplyType = document.getElementById("invoiceSupplyType");
+  if (invoiceSupplyType) invoiceSupplyType.addEventListener("change", renderTaxInvoice);
 
   // Orders Drawer Close
   document.getElementById("closeDrawerBtn").addEventListener("click", () => {
@@ -791,6 +1044,12 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("tabWorkbench").click();   // e.g. created from Past Work Orders: show the new order
     newWoModal.classList.remove("open");
     showToast(`Work Order #${woNum} created successfully!`);
+
+    // Auto-focus on Part # input to key in first item immediately
+    setTimeout(() => {
+      const partInput = document.getElementById("addPartNo");
+      if (partInput) partInput.focus();
+    }, 200);
   });
 
   // Edit Line Item Modal Handlers
