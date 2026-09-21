@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=2" />
 </head>
 <body>
   <!-- TOP APP BAR -->
@@ -137,7 +137,7 @@
   <!-- SIMPLIFIED VIEW SWITCHER -->
   <nav class="sub-nav">
     <div class="nav-tabs">
-      <button class="nav-tab active" id="tabWorkbench" data-view="workbench">
+      <button class="nav-tab active" id="tabWorkbench" data-view="workbench" onclick="switchMainView('workbench')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
           <polyline points="14 2 14 8 20 8"></polyline>
@@ -146,7 +146,7 @@
         </svg>
         <span>WORK ORDER WORKBENCH</span>
       </button>
-      <button class="nav-tab" id="tabHistory" data-view="history">
+      <button class="nav-tab" id="tabHistory" data-view="history" onclick="switchMainView('history')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
           <circle cx="12" cy="12" r="10"></circle>
           <polyline points="12 6 12 12 16 14"></polyline>
@@ -1313,6 +1313,41 @@
   <!-- TOAST NOTIFICATION CONTAINER -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=2"></script>
+
+  <!-- INLINE TAB SWITCHING — Guaranteed to work independent of app.js load state -->
+  <script>
+    function switchMainView(viewName) {
+      var workbenchView = document.getElementById('workbenchView');
+      var historyView = document.getElementById('historyView');
+      var tabWorkbench = document.getElementById('tabWorkbench');
+      var tabHistory = document.getElementById('tabHistory');
+
+      if (viewName === 'history') {
+        // Show history, hide workbench
+        workbenchView.style.display = 'none';
+        historyView.style.display = 'flex';
+        historyView.style.flexDirection = 'column';
+        historyView.style.gap = '16px';
+        tabWorkbench.classList.remove('active');
+        tabHistory.classList.add('active');
+        // Scroll to top
+        window.scrollTo(0, 0);
+        // Trigger the JS render if available
+        if (typeof renderHistoryTable === 'function') renderHistoryTable();
+      } else {
+        // Show workbench, hide history
+        historyView.style.display = 'none';
+        workbenchView.style.display = 'flex';
+        workbenchView.style.flexDirection = 'column';
+        workbenchView.style.gap = '16px';
+        tabHistory.classList.remove('active');
+        tabWorkbench.classList.add('active');
+        // Scroll to top
+        window.scrollTo(0, 0);
+        if (typeof renderWorkOrder === 'function') renderWorkOrder();
+      }
+    }
+  </script>
 </body>
 </html>

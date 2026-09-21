@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+.panel { display: none; padding: 20px; background: lightyellow; }
+.panel.active { display: block; }
+</style>
+</head>
+<body>
+<button onclick="switchTo('a')">Tab A</button>
+<button onclick="switchTo('b')">Tab B</button>
+<div id="panelA" class="panel active">Panel A content here</div>
+<div id="panelB" class="panel">Panel B content here - SHOULD SHOW</div>
+<script>
+function switchTo(name) {
+  document.getElementById('panelA').classList.remove('active');
+  document.getElementById('panelB').classList.remove('active');
+  document.getElementById('panel' + name.toUpperCase()).classList.add('active');
+}
+</script>
+</body>
+</html>
