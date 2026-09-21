@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SGR Moulds India — Work Order & Manufacturing Workbench</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- TOP APP BAR -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="brand-badge">
+        <div class="brand-logo-icon">
+          <svg viewBox="0 0 48 48" fill="none" class="sgr-logo-svg">
+            <path d="M24 4L4 14V34L24 44L44 34V14L24 4Z" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" fill="rgba(60, 127, 95, 0.15)"/>
+            <path d="M24 14L12 20V28L24 34L36 28V20L24 14Z" fill="currentColor"/>
+            <circle cx="24" cy="24" r="3.5" fill="#fbf7f0"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <div class="brand-title">SGR MOULDS INDIA <span class="pvt-tag">PVT LTD</span></div>
+          <div class="brand-unit">
+            <span class="unit-marker">UNIT:</span> SIPCOT PERUNDURAI // TAMIL NADU
+          </div>
+        </div>
+      </div>
+
+      <div class="shift-pill">
+        <span class="live-pulse"></span>
+        <span class="shift-name">SHIFT 1 [RUNNING]</span>
+        <span class="view-sep">//</span>
+        <div class="role-selector-wrap">
+          <select id="roleViewSelect" class="role-select" title="Switch Role View">
+            <option value="gm">General Manager View</option>
+            <option value="planner">Production Planner View</option>
+            <option value="qa">Quality Lead View</option>
+            <option value="dispatch">Dispatch & Logistics View</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- GLOBAL SEARCH -->
+    <div class="header-center">
+      <div class="search-box">
+        <svg class="search-icon" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+        </svg>
+        <input type="text" id="globalSearchInput" placeholder="Search Work Orders / Items / Memos... (Press '/' to focus)" />
+        <kbd class="search-kbd">/</kbd>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <button class="icon-btn" id="orderDrawerBtn" title="View All Work Orders">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 6h16M4 12h16M4 18h7" />
+        </svg>
+        <span class="btn-label">Orders (<span id="totalOrdersCount">3</span>)</span>
+      </button>
+
+      <button class="icon-btn highlight-btn" id="newWorkOrderBtn">
+        <svg viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+          <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
+        </svg>
+        <span class="btn-label">New Work Order</span>
+      </button>
+
+      <div class="user-profile-badge">
+        <div class="avatar">PL</div>
+        <div class="user-meta">
+          <span class="user-name">Production Lead</span>
+          <span class="user-id">ID: SGR-PL-04</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- NAVIGATION TABS -->
+  <nav class="sub-nav">
+    <div class="nav-tabs">
+      <button class="nav-tab active" data-tab="work-orders">WORK ORDERS</button>
+      <button class="nav-tab" data-tab="internal-memos">INTERNAL MEMOS</button>
+      <button class="nav-tab" data-tab="dispatch">DISPATCH & LOGISTICS</button>
+      <button class="nav-tab" data-tab="packing">PACKING & PALLETS</button>
+      <button class="nav-tab" data-tab="inventory">INVENTORY & RAW MATERIALS</button>
+      <button class="nav-tab" data-tab="quality">QUALITY & TEST CERTS</button>
+    </div>
+    <div class="nav-extra-status">
+      <span class="plant-status-dot"></span>
+      <span>CORRUGATOR #02: ACTIVE</span>
+    </div>
+  </nav>
+
+  <!-- MAIN WORK ORDER CONTAINER -->
+  <main class="workbench-container" id="mainContainer">
+
+    <!-- WORK ORDER HEADER & ACTIONS RIBBON -->
+    <section class="wo-header-card">
+      <div class="wo-title-strip">
+        <div class="wo-identifier">
+          <span class="wo-label">Work Order</span>
+          <h1 class="wo-number" id="displayWoNumber">#343/2026-27</h1>
+          <span class="doc-ref-badge" id="displayDocRef">DOC REF: SGR-MKT-02</span>
+          <span class="status-badge status-confirmed" id="displayStatusBadge">
+            <span class="dot"></span> CONFIRMED — READY FOR FLOOR
+          </span>
+          <span class="delivery-target-chip" id="displayDeliveryChip">
+            <svg viewBox="0 0 20 20" fill="currentColor" class="chip-icon">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+            </svg>
+            Delivery: <strong id="chipDeliveryDate">21/09/2026</strong> (Urgent // 5 Days)
+          </span>
+        </div>
+
+        <div class="wo-actions-group">
+          <button class="action-btn action-secondary" id="editOrderHeaderBtn" title="Edit Order Details">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+            EDIT ORDER
+          </button>
+
+          <button class="action-btn action-secondary" id="printMemoBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/>
+              <path d="M6 14h12v8H6z"/>
+            </svg>
+            PRINT MEMO
+          </button>
+          
+          <button class="action-btn action-secondary" id="exportPdfBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+            EXPORT EDI / PDF
+          </button>
+
+          <button class="action-btn action-secondary" id="saveDraftBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+              <polyline points="7 3 7 8 15 8"/>
+            </svg>
+            SAVE DRAFT
+          </button>
+
+          <button class="action-btn action-primary" id="releaseFloorBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+            RELEASE TO CORRUGATOR & FINISHING
+          </button>
+        </div>
+      </div>
+
+      <!-- WORK ORDER METADATA DETAILS -->
+      <div class="wo-meta-grid">
+        <div class="meta-item">
+          <div class="meta-label">VENDOR CODE</div>
+          <div class="meta-value-main" id="metaVendorCode">CCPB00002</div>
+          <div class="meta-sub" id="metaVendorSub">SGR Division // Pkg</div>
+        </div>
+
+        <div class="meta-item">
+          <div class="meta-label">ORDER ISSUE DATE</div>
+          <div class="meta-value-main" id="metaIssueDate">16/09/2026</div>
+          <div class="meta-sub">Shift A (08:30 IST)</div>
+        </div>
+
+        <div class="meta-item highlight-alert">
+          <div class="meta-label">DELIVERY TARGET</div>
+          <div class="meta-value-main text-danger" id="metaDeliveryTarget">21/09/2026 !</div>
+          <div class="meta-sub">Strict Loading Schedule</div>
+        </div>
+
+        <div class="meta-item">
+          <div class="meta-label">DELIVERY DESTINATION / CONSIGNEE</div>
+          <div class="meta-value-main" id="metaDestination">Chennai // APA Engineering</div>
+          <div class="meta-sub">Dedicated Truck // Direct SIPCOT Line</div>
+        </div>
+
+        <div class="meta-item">
+          <div class="meta-label">REVISION & STANDARD</div>
+          <div class="meta-value-main" id="metaRevision">Rev 00, Dt: 01/08/22</div>
+          <div class="meta-sub text-fsc">ISO 9001 / FSC Certified</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- LIVE METRIC KPI TILES -->
+    <section class="kpi-grid">
+      <!-- Total Quantity -->
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-title">TOTAL QUANTITY</span>
+          <div class="kpi-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+              <path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/>
+            </svg>
+          </div>
+        </div>
+        <div class="kpi-metric-val" id="kpiTotalQty">3,000</div>
+        <div class="kpi-metric-unit">Nos <span class="muted">(Pieces / Units)</span></div>
+      </div>
+
+      <!-- Running Length -->
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-title">RUNNING LENGTH</span>
+          <div class="kpi-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 6h18M3 12h18M3 18h18M7 3v18M17 3v18"/>
+            </svg>
+          </div>
+        </div>
+        <div class="kpi-metric-val" id="kpiRunningLength">3,049</div>
+        <div class="kpi-metric-unit">Meters Total Run</div>
+      </div>
+
+      <!-- Net Weight -->
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-title">NET WEIGHT</span>
+          <div class="kpi-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 3v18M6 8l6-5 6 5M4 14l8-4 8 4M6 20h12"/>
+            </svg>
+          </div>
+        </div>
+        <div class="kpi-metric-val" id="kpiNetWeight">2,054</div>
+        <div class="kpi-metric-unit">Kgs <span class="muted">(~2.05 MT Kraft)</span></div>
+      </div>
+
+      <!-- Item Profile -->
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-title">ITEM PROFILE</span>
+          <div class="kpi-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="8" y1="6" x2="21" y2="6"/>
+              <line x1="8" y1="12" x2="21" y2="12"/>
+              <line x1="8" y1="18" x2="21" y2="18"/>
+              <line x1="3" y1="6" x2="3.01" y2="6"/>
+              <line x1="3" y1="12" x2="3.01" y2="12"/>
+              <line x1="3" y1="18" x2="3.01" y2="18"/>
+            </svg>
+          </div>
+        </div>
+        <div class="kpi-metric-val" id="kpiItemProfile">03</div>
+        <div class="kpi-metric-unit">Lines (Edge / V-Boards)</div>
+      </div>
+
+      <!-- Quality Gate -->
+      <div class="kpi-card highlight-kpi">
+        <div class="kpi-header">
+          <span class="kpi-title">QUALITY GATE</span>
+          <div class="kpi-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              <polyline points="9 12 11 14 15 10"/>
+            </svg>
+          </div>
+        </div>
+        <div class="kpi-metric-val text-green" id="kpiQualityGate">TC: YES</div>
+        <div class="kpi-metric-unit">Test Cert Mandatory</div>
+      </div>
+    </section>
+
+    <!-- MANUFACTURE ITEM SCHEDULE (DATA GRID WITH WHITEBOARD COLUMNS) -->
+    <section class="schedule-section">
+      <div class="schedule-header">
+        <div class="section-title-wrap">
+          <h2 class="section-title">MANUFACTURE ITEM SCHEDULE</h2>
+          <span class="section-subtitle">Edgeboard & Corner Protector Production Line</span>
+        </div>
+        <div class="legend-pills">
+          <span class="legend-item"><span class="legend-box spec-custom"></span> Special Spec Flag</span>
+          <span class="legend-item"><span class="legend-box spec-standard"></span> Standard Kraft Spec</span>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table class="schedule-table" id="itemsTable">
+          <thead>
+            <tr>
+              <th style="width: 140px;">PART #</th>
+              <th>DESCRIPTION</th>
+              <th style="width: 90px;" class="text-center">QTY</th>
+              <th style="width: 90px;" class="text-center">UOM</th>
+              <th style="width: 100px;" class="text-right">RUN MTR</th>
+              <th style="width: 110px;" class="text-right">WEIGHT</th>
+              <th style="width: 140px;" class="text-center">CATEGORY</th>
+              <th style="width: 100px;" class="text-right">PRICE (₹)</th>
+              <th style="width: 110px;" class="text-right">TOTAL (₹)</th>
+              <th>REMARKS</th>
+              <th style="width: 140px;">CUST REF</th>
+              <th style="width: 80px;" class="text-center">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody id="itemsTableBody">
+            <!-- Dynamic items rendered by JavaScript -->
+          </tbody>
+          <tfoot>
+            <tr class="totals-row">
+              <td colspan="2" class="text-bold">ORDER GRAND TOTALS:</td>
+              <td class="text-center text-bold" id="footerTotalQty">3,000 Nos</td>
+              <td class="text-center">--</td>
+              <td class="text-right text-bold" id="footerTotalMeters">3,049 Mtr</td>
+              <td class="text-right text-bold font-mono" id="footerTotalWeight">2,054 KGS</td>
+              <td class="text-center">--</td>
+              <td class="text-right">--</td>
+              <td class="text-right text-bold font-mono text-emerald" id="footerGrandAmount">₹152,500</td>
+              <td colspan="2" class="text-forest text-bold" style="letter-spacing: 0.5px;">100% FLOOR ASSIGNED</td>
+              <td class="text-center">--</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <!-- QUICK LINE ADD ROW FORM -->
+      <form class="quick-add-form" id="quickAddForm">
+        <div class="quick-add-title">
+          <svg viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd"/>
+          </svg>
+          QUICK LINE ADD
+        </div>
+        <div class="quick-add-inputs">
+          <input type="text" id="addPartNo" placeholder="Part # (e.g. EB080600004)" class="form-input" required />
+          <input type="text" id="addDesc" placeholder="Description (e.g. EB 80 X 80 X 6 X 1200 mm)" class="form-input" style="flex: 2.2;" required />
+          <input type="number" id="addQty" placeholder="Qty" class="form-input text-center" style="width: 80px;" min="1" value="1000" required />
+          <input type="number" id="addLengthMm" placeholder="Len (mm)" class="form-input text-center" style="width: 90px;" min="100" value="1000" required />
+          <select id="addUom" class="form-select" style="width: 90px;">
+            <option value="NOS">NOS</option>
+            <option value="MTR">MTR</option>
+            <option value="BDL">BDL</option>
+          </select>
+          <input type="text" id="addWeight" placeholder="Weight (e.g. 700)" class="form-input text-right" style="width: 90px;" />
+          <select id="addCategory" class="form-select" style="width: 140px;">
+            <option value="Standard Angle">Standard Angle</option>
+            <option value="Custom Spec">Custom Spec</option>
+            <option value="Heavy Duty">Heavy Duty</option>
+            <option value="Moisture Proof">Moisture Proof</option>
+          </select>
+          <input type="number" id="addPrice" placeholder="Price ₹" class="form-input text-right" style="width: 90px;" step="0.5" value="45.00" />
+          <input type="text" id="addRemarks" placeholder="Remarks (e.g. Standard Kraft Spec)" class="form-input" style="flex: 1.5;" />
+          <input type="text" id="addCustRef" placeholder="Cust Ref (e.g. CCPB-03)" class="form-input" style="width: 120px;" />
+          <button type="submit" class="btn-add-item" id="btnAddItem">
+            <svg viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+              <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
+            </svg>
+            ADD ITEM
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- DUAL BOTTOM SECTION: REMARKS & PACKAGING DIRECTIVES + INTERNAL AUDIT CHAIN -->
+    <div class="bottom-dual-grid">
+      
+      <!-- LEFT: PRODUCTION REMARKS & DIRECTIVES -->
+      <section class="directive-card">
+        <div class="directive-header">
+          <div class="directive-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5">
+              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
+            PRODUCTION REMARKS & PACKAGING DIRECTIVES
+          </div>
+          <span class="sop-tag">SOP // REF: SGR-MKT-02</span>
+        </div>
+
+        <!-- PROFILE AGGREGATION CALCULATIONS -->
+        <div class="profile-aggregations" id="profileAggregationsContainer">
+          <!-- Dynamically populated e.g. 1. EB 80 X 80 X 6 = 1,830 Mtr -->
+        </div>
+
+        <!-- SOP NOTES LIST -->
+        <div class="sop-notes-list">
+          <div class="sop-note-item">
+            <div class="note-icon note-alert">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+              </svg>
+            </div>
+            <div class="note-content">
+              <strong>NOTE 1: TEST CERTIFICATES & PACKING DOCUMENTATION</strong>
+              <p>Packing List & Test Certificates <span class="text-danger-bold">MUST be generated and verified before loading</span> vehicle.</p>
+            </div>
+          </div>
+
+          <div class="sop-note-item">
+            <div class="note-icon note-pkg">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <line x1="3" y1="9" x2="21" y2="9"/>
+                <line x1="9" y1="21" x2="9" y2="9"/>
+              </svg>
+            </div>
+            <div class="note-content">
+              <strong>NOTE 2: BUNDLE STRAPPING UNITIZATION</strong>
+              <p>Packing requirement: <span class="badge-inline">50 Nos / Bundle</span> strapped with cross-tension polyester bands.</p>
+            </div>
+          </div>
+
+          <div class="sop-note-item">
+            <div class="note-icon note-freight">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="1" y="3" width="15" height="13"/>
+                <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
+                <circle cx="5.5" cy="18.5" r="2.5"/>
+                <circle cx="18.5" cy="18.5" r="2.5"/>
+              </svg>
+            </div>
+            <div class="note-content">
+              <strong>NOTE 3: FREIGHT LOGISTICS MODE</strong>
+              <p>Mode of Transport: <span class="text-highlight">Dedicated Separate Vehicle</span> (Direct Consignment to Chennai APA Engineering).</p>
+            </div>
+          </div>
+
+          <div class="sop-note-item">
+            <div class="note-icon note-stack">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+              </svg>
+            </div>
+            <div class="note-content">
+              <strong>NOTE 4: STACKING & DIMENSIONAL CLEARANCE</strong>
+              <p>The total height of the pallet <span class="text-highlight">has to be 46" inches</span> (inclusive of pallet base).</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- PALLET CAPACITY FOOTER BAR -->
+        <div class="pallet-capacity-bar">
+          <div class="pallet-calc-info">
+            <span class="pallet-dot"></span>
+            <span class="pallet-text">PALLET BUILD TARGET: <strong id="calcBundleCount">60 BUNDLES TOTAL (3,000 NOS)</strong></span>
+          </div>
+          <span class="pallet-clearance-tag">Max container height: standard truck clearance</span>
+        </div>
+      </section>
+
+      <!-- RIGHT: INTERNAL SIGN-OFF & AUDIT CHAIN -->
+      <section class="audit-card">
+        <div class="audit-header">
+          <div class="audit-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <path d="M16 13l-4 4-2-2"/>
+            </svg>
+            INTERNAL SIGN-OFF & AUDIT CHAIN
+          </div>
+          <span class="audit-seal-tag">SIGNED</span>
+        </div>
+
+        <p class="audit-desc">Authentication signatures recorded per ISO compliance for Work Order #343/2026-27 issuance to SIPCOT Shopfloor:</p>
+
+        <div class="audit-steps-list">
+          
+          <!-- STEP 1: PREPARED BY -->
+          <div class="audit-step-item" id="auditStep1">
+            <div class="step-avatar avatar-dm">DM</div>
+            <div class="step-info">
+              <div class="step-role-title">Prepared by</div>
+              <div class="step-person-name" id="step1Name">D. Mohan (Production Planning)</div>
+            </div>
+            <div class="step-status">
+              <button class="status-chip chip-verified" id="step1Btn" onclick="toggleAuditStep(1)">
+                <svg viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5">
+                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                </svg>
+                <span id="step1StatusText">Verified</span>
+              </button>
+              <span class="step-time" id="step1Time">16/09/2026 09:15</span>
+            </div>
+          </div>
+
+          <!-- STEP 2: VERIFIED BY QA -->
+          <div class="audit-step-item" id="auditStep2">
+            <div class="step-avatar avatar-qa">QA</div>
+            <div class="step-info">
+              <div class="step-role-title">Verified by</div>
+              <div class="step-person-name" id="step2Name">Quality Control & Plant Head</div>
+            </div>
+            <div class="step-status">
+              <button class="status-chip chip-approved" id="step2Btn" onclick="toggleAuditStep(2)">
+                <svg viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5">
+                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                </svg>
+                <span id="step2StatusText">Approved</span>
+              </button>
+              <span class="step-time" id="step2Time">16/09/2026 10:40</span>
+            </div>
+          </div>
+
+          <!-- STEP 3: GENERAL MANAGER / JMD -->
+          <div class="audit-step-item" id="auditStep3">
+            <div class="step-avatar avatar-gm">GM</div>
+            <div class="step-info">
+              <div class="step-role-title">General Manager / JMD</div>
+              <div class="step-person-name" id="step3Name">Executive Authorisation</div>
+            </div>
+            <div class="step-status">
+              <button class="status-chip chip-released" id="step3Btn" onclick="toggleAuditStep(3)">
+                <svg viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5">
+                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                </svg>
+                <span id="step3StatusText">Released</span>
+              </button>
+              <span class="step-time" id="step3Time">16/09/2026 11:20</span>
+            </div>
+          </div>
+
+          <!-- STEP 4: WAREHOUSE GATE & DISPATCH -->
+          <div class="audit-step-item" id="auditStep4">
+            <div class="step-avatar avatar-wh">WH</div>
+            <div class="step-info">
+              <div class="step-role-title">Warehouse Gate & Dispatch</div>
+              <div class="step-person-name" id="step4Name">Vehicle Loading Inspection</div>
+            </div>
+            <div class="step-status">
+              <button class="status-chip chip-pending" id="step4Btn" onclick="toggleAuditStep(4)">
+                <svg viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+                </svg>
+                <span id="step4StatusText">Pending Loading</span>
+              </button>
+              <span class="step-time text-warning" id="step4Time">Due 21/09/2026</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="audit-footer-row">
+          <div class="blockchain-verified">
+            <svg viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-emerald">
+              <path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            <span>Digitally Sealed & Audit Logged</span>
+          </div>
+          <button class="btn-text-action" id="btnReverify">Re-verify Memo</button>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- BOTTOM MACHINE & SHOPFLOOR TELEMETRY STATUS BAR -->
+    <footer class="shopfloor-telemetry-bar">
+      <div class="telemetry-left">
+        <div class="machine-icon-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="6" width="20" height="12" rx="2"/>
+            <path d="M12 12h.01M17 12h.01M7 12h.01"/>
+          </svg>
+        </div>
+        <div class="machine-meta">
+          <div class="machine-name">SGR Edge Board Corrugation Line 02</div>
+          <div class="machine-details">
+            Perundurai Plant SIPCOT // Estimated run cycle: <strong>3 hrs 45 mins</strong> @ 22 m/min speed // Slitter Blades calibrated for 6mm wall thickness.
+          </div>
+        </div>
+      </div>
+      <div class="telemetry-right">
+        <span class="telemetry-tag">OPERATOR SHIFT STATUS:</span>
+        <span class="tooling-status-badge">Line Clear // Tooling Ready</span>
+      </div>
+    </footer>
+
+  </main>
+
+  <!-- WORK ORDERS DRAWER (SIDE MODAL) -->
+  <div class="drawer-backdrop" id="ordersDrawer">
+    <div class="drawer-panel">
+      <div class="drawer-header">
+        <h3>Active Work Orders</h3>
+        <button class="close-drawer-btn" id="closeDrawerBtn">&times;</button>
+      </div>
+      <div class="drawer-body" id="ordersListContainer">
+        <!-- Injected dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- NEW WORK ORDER MODAL -->
+  <div class="modal-backdrop" id="newWoModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="12" y1="18" x2="12" y2="12"/>
+              <line x1="9" y1="15" x2="15" y2="15"/>
+            </svg>
+          </div>
+          <div>
+            <h3>Create New Work Order</h3>
+            <p>SGR Moulds India Pvt Ltd — Manufacturing Order Generation</p>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="closeNewWoModal">&times;</button>
+      </div>
+      
+      <form id="createWoForm" class="modal-form">
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Work Order Number</label>
+            <input type="text" id="newWoNum" value="#344/2026-27" class="form-control" required />
+          </div>
+          <div class="form-group">
+            <label>Doc Reference</label>
+            <input type="text" id="newDocRef" value="DOC REF: SGR-MKT-02" class="form-control" required />
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Vendor / Client Code</label>
+            <input type="text" id="newVendorCode" value="CCPB00005" class="form-control" required />
+          </div>
+          <div class="form-group">
+            <label>Division / Sub-category</label>
+            <input type="text" id="newVendorSub" value="SGR Division // Pkg" class="form-control" />
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Order Date</label>
+            <input type="date" id="newIssueDate" class="form-control" required />
+          </div>
+          <div class="form-group">
+            <label>Delivery Target Date</label>
+            <input type="date" id="newDeliveryDate" class="form-control" required />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Delivery Destination / Consignee</label>
+          <input type="text" id="newDestination" placeholder="e.g. Coimbatore // TexAuto Pack" class="form-control" required />
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Quality Gate Test Cert</label>
+            <select id="newQualityGate" class="form-control">
+              <option value="YES">TC: YES (Mandatory)</option>
+              <option value="NO">TC: OPTIONAL</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Initial Status</label>
+            <select id="newStatus" class="form-control">
+              <option value="DRAFT">DRAFT</option>
+              <option value="CONFIRMED — READY FOR FLOOR">CONFIRMED — READY FOR FLOOR</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-cancel" id="cancelCreateWo">Cancel</button>
+          <button type="submit" class="btn-create">Create & Open Workbench</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- EDIT LINE ITEM MODAL -->
+  <div class="modal-backdrop" id="editItemModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+          </div>
+          <div>
+            <h3>Edit Manufacture Line Item</h3>
+            <p>Modify dimensions, specifications, quantity, or pricing</p>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="closeEditItemModal">&times;</button>
+      </div>
+
+      <form id="editItemForm" class="modal-form">
+        <input type="hidden" id="editItemIndex" />
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Part Number (Item Code)</label>
+            <input type="text" id="editPartNo" class="form-control" required />
+          </div>
+          <div class="form-group">
+            <label>Customer Reference Code</label>
+            <input type="text" id="editCustRef" class="form-control" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Item Description / Dimensions</label>
+          <input type="text" id="editDesc" class="form-control" required />
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Quantity</label>
+            <input type="number" id="editQty" class="form-control text-center" min="1" required />
+          </div>
+          <div class="form-group">
+            <label>Length in Millimeters (mm)</label>
+            <input type="number" id="editLengthMm" class="form-control text-center" min="50" required />
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Unit of Measure (UOM)</label>
+            <select id="editUom" class="form-control">
+              <option value="NOS">NOS (Pieces)</option>
+              <option value="MTR">MTR (Meters)</option>
+              <option value="BDL">BDL (Bundles)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Net Weight (Kgs)</label>
+            <input type="number" id="editWeight" class="form-control text-right" />
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Category Specification</label>
+            <select id="editCategory" class="form-control">
+              <option value="Standard Angle">Standard Angle</option>
+              <option value="Custom Spec">Custom Spec</option>
+              <option value="Heavy Duty">Heavy Duty</option>
+              <option value="Moisture Proof">Moisture Proof</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Unit Price (₹)</label>
+            <input type="number" id="editPrice" class="form-control text-right" step="0.5" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Production Remarks & Surface Finish</label>
+          <input type="text" id="editRemarks" class="form-control" placeholder="e.g. Without Lamination Without Painting" />
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-cancel" id="cancelEditItem">Cancel</button>
+          <button type="submit" class="btn-create">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- EDIT WORK ORDER HEADER MODAL -->
+  <div class="modal-backdrop" id="editHeaderModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+          </div>
+          <div>
+            <h3>Edit Work Order Details</h3>
+            <p>Update vendor, delivery deadlines, destinations, and quality standards</p>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="closeEditHeaderModal">&times;</button>
+      </div>
+
+      <form id="editHeaderForm" class="modal-form">
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Work Order ID</label>
+            <input type="text" id="editWoId" class="form-control" required />
+          </div>
+          <div class="form-group">
+            <label>Document Reference</label>
+            <input type="text" id="editDocRef" class="form-control" required />
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Vendor Code</label>
+            <input type="text" id="editVendorCode" class="form-control" required />
+          </div>
+          <div class="form-group">
+            <label>Vendor Division</label>
+            <input type="text" id="editVendorSub" class="form-control" />
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Order Issue Date</label>
+            <input type="text" id="editIssueDate" class="form-control" placeholder="DD/MM/YYYY" required />
+          </div>
+          <div class="form-group">
+            <label>Delivery Target Date</label>
+            <input type="text" id="editDeliveryTarget" class="form-control" placeholder="DD/MM/YYYY" required />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Delivery Destination / Consignee</label>
+          <input type="text" id="editDestination" class="form-control" required />
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Quality Gate Test Cert</label>
+            <select id="editQualityGate" class="form-control">
+              <option value="TC: YES">TC: YES (Test Cert Mandatory)</option>
+              <option value="TC: OPTIONAL">TC: OPTIONAL</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Work Order Status</label>
+            <select id="editStatus" class="form-control">
+              <option value="CONFIRMED — READY FOR FLOOR">CONFIRMED — READY FOR FLOOR</option>
+              <option value="RELEASED — IN PRODUCTION">RELEASED — IN PRODUCTION</option>
+              <option value="DRAFT">DRAFT</option>
+              <option value="COMPLETED — READY FOR DISPATCH">COMPLETED — READY FOR DISPATCH</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-cancel" id="cancelEditHeader">Cancel</button>
+          <button type="submit" class="btn-create">Update Order Details</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- PIXEL-PERFECT PRINT MEMO MODAL (MATCHES SGR-MKT-02 PAPER SCAN) -->
+  <div class="modal-backdrop" id="printMemoModal">
+    <div class="modal-dialog print-preview-dialog">
+      <div class="print-toolbar no-print">
+        <div class="toolbar-title">
+          <span>Physical Paper Memo Preview (Doc Ref: SGR-MKT-02)</span>
+        </div>
+        <div class="toolbar-actions">
+          <button class="action-btn action-primary" onclick="window.print()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+              <path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/>
+              <path d="M6 14h12v8H6z"/>
+            </svg>
+            Print Internal Memo
+          </button>
+          <button class="btn-cancel" id="closePrintModal">Close Preview</button>
+        </div>
+      </div>
+
+      <!-- EXACT SGR-MKT-02 PAPER REPLICA -->
+      <div class="paper-sheet" id="printSheetContent">
+        <div class="paper-border-wrap">
+          
+          <!-- MEMO HEADER -->
+          <div class="paper-top-header">
+            <div class="paper-logo-brand">
+              <div class="paper-logo-icon">SGR</div>
+              <div class="paper-company-title">SGR MOULDS INDIA PVT LTD</div>
+            </div>
+          </div>
+
+          <!-- INTERNAL MEMO SUBTITLE -->
+          <div class="paper-memo-banner">
+            <div class="memo-left-title">
+              <h2>Internal Memo</h2>
+              <div class="work-order-rn">
+                <span>WORK ORDER</span>
+                <span class="highlight-rn">RN</span>
+              </div>
+            </div>
+            <div class="memo-right-refs">
+              <div class="ref-line">Doc Ref : <strong>SGR-MKT-02</strong></div>
+              <div class="ref-line">Rev.No:00,Dt:01/08/22</div>
+            </div>
+          </div>
+
+          <!-- ORDER META BOX -->
+          <div class="paper-meta-box">
+            <div class="meta-field-row">
+              <span class="meta-k">Vendor Code :</span>
+              <span class="meta-v" id="printVendorCode">CCPB00002</span>
+            </div>
+            <div class="meta-field-row">
+              <span class="meta-k">Work Order no :</span>
+              <span class="meta-v" id="printWoNo">343/2026-27</span>
+            </div>
+            <div class="meta-field-row">
+              <span class="meta-k">Work Order Date :</span>
+              <span class="meta-v" id="printWoDate">16/09/2026 <span class="check-mark">✓</span></span>
+            </div>
+            <div class="meta-field-row">
+              <span class="meta-k">Delivery Location :</span>
+              <span class="meta-v" id="printLocation">Chennai // APA Engineering</span>
+            </div>
+            <div class="meta-field-row">
+              <span class="meta-k">Delivery :</span>
+              <span class="meta-v"><span class="highlight-yellow" id="printDeliveryDate">21/09/2026</span> <span class="check-mark">✓</span></span>
+            </div>
+          </div>
+
+          <div class="paper-instruction">
+            Please produce the following Items
+          </div>
+
+          <!-- ITEMS GRID -->
+          <table class="paper-table">
+            <thead>
+              <tr>
+                <th style="width: 40px;">Sl.no</th>
+                <th style="width: 140px;">Customer<br/>Part Code</th>
+                <th>Particulars</th>
+                <th style="width: 120px;">Item Code</th>
+                <th style="width: 70px;">Qty</th>
+                <th style="width: 60px;">UOM</th>
+                <th style="width: 80px;">Mtr</th>
+              </tr>
+            </thead>
+            <tbody id="printTableBody">
+              <!-- Dynamically populated -->
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="4" class="text-right text-bold">Total Nos</td>
+                <td class="text-bold" id="printTotalNos">3,000</td>
+                <td class="text-bold text-right">Total Meters</td>
+                <td class="text-bold" id="printTotalMeters">3,049</td>
+              </tr>
+            </tfoot>
+          </table>
+
+          <!-- REMARKS AND ORDER SUMMARY -->
+          <div class="paper-remarks-summary-grid">
+            <div class="paper-remarks-col">
+              <div class="section-heading">Remarks:</div>
+              <div class="remarks-body" id="printRemarksAggregations">
+                1.EB 80 X 80 X 6 =1830 mtr<br/>
+                2.EB 75 X 75 X 6 =1,219 mtr
+              </div>
+              <div class="test-cert-line">
+                <strong>Test Certificate:</strong> <span id="printTestCertStatus">Yes</span>
+              </div>
+              <div class="notes-block">
+                <div><strong>Note:1.</strong>Packing List & Test Certificates Should be given before Loading.</div>
+                <div><strong>2.</strong>Packing:50 Nos/Bundle.</div>
+                <div><strong>3.</strong>Mode of Transport :Separate Vehicle.</div>
+                <div><strong>4.</strong>Packing:The Height of the pallet has to be 46" inches including pallet height.</div>
+              </div>
+            </div>
+
+            <div class="paper-summary-col">
+              <div class="summary-heading"><u>Order Summary:</u></div>
+              <div class="summary-line">
+                *Total Numbers-<strong id="printSumNos">3,000 Nos</strong>
+              </div>
+              <div class="summary-line">
+                *Total Running Meters =<strong id="printSumMeters">3,049 Meters</strong>
+              </div>
+              <div class="summary-line">
+                * Total Weight = <strong id="printSumWeight">2,054 kgs</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- SIGNATURE BLOCKS (EXACT MATCH TO PHYSICAL SCAN) -->
+          <div class="paper-signatures-grid">
+            <div class="sig-block">
+              <div class="sig-signature-mock" id="sigPrepared">
+                <svg viewBox="0 0 100 40" class="ink-sign">
+                  <path d="M10 28 C 25 10, 30 35, 45 15 C 60 5, 75 30, 90 20" stroke="#1c1a17" stroke-width="1.8" fill="none"/>
+                </svg>
+              </div>
+              <div class="sig-title">Prepared by</div>
+            </div>
+
+            <div class="sig-block">
+              <div class="sig-signature-mock" id="sigVerified">
+                <svg viewBox="0 0 100 40" class="ink-sign">
+                  <path d="M5 25 C 20 5, 40 38, 60 18 C 70 8, 85 28, 95 15" stroke="#1c1a17" stroke-width="1.8" fill="none"/>
+                </svg>
+              </div>
+              <div class="sig-title">Verified by</div>
+            </div>
+
+            <div class="sig-block">
+              <div class="sig-signature-mock" id="sigGm">
+                <svg viewBox="0 0 100 40" class="ink-sign">
+                  <path d="M10 20 C 30 5, 50 30, 70 10 C 80 25, 90 12, 95 28" stroke="#1c1a17" stroke-width="1.8" fill="none"/>
+                </svg>
+              </div>
+              <div class="sig-title">General Manager</div>
+            </div>
+
+            <div class="sig-block">
+              <div class="sig-signature-mock" id="sigJmd">
+                <svg viewBox="0 0 100 40" class="ink-sign">
+                  <path d="M15 25 C 25 8, 45 32, 65 12 C 75 22, 85 10, 92 20" stroke="#1c1a17" stroke-width="1.8" fill="none"/>
+                </svg>
+              </div>
+              <div class="sig-title">JMD</div>
+            </div>
+
+            <div class="sig-block">
+              <div class="sig-signature-mock" id="sigReceived">
+                <svg viewBox="0 0 100 40" class="ink-sign">
+                  <path d="M8 20 C 18 35, 30 8, 50 25 C 65 10, 80 30, 90 18" stroke="#1c1a17" stroke-width="1.8" fill="none"/>
+                </svg>
+              </div>
+              <div class="sig-title">Received by</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
