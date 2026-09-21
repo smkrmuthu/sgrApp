@@ -182,7 +182,7 @@ const Cloud = (() => {
   // ------------------------------------------------------------ pull
   async function pull({ force = false } = {}) {
     if (!active()) return;
-    if (document.querySelector(".modal-backdrop.open:not(#loginGate)")) return;   // don't shift data under an open form
+    if (document.querySelector(".modal-backdrop.open:not(#loginGate), .is-editing")) return;   // don't shift data under an open form
     const now = Date.now();
     if (!force && now - lastPull < PULL_MIN_GAP_MS) return;
     lastPull = now;

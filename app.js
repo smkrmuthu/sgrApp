@@ -162,13 +162,20 @@ let currentOrderIndex = -1;
 // switching tabs or opening another order; it is lost only if the page is reloaded.
 let draftOrder = null;
 
+// uid of the saved order whose details are being edited in place in the header; null when not editing
+let headerEditUid = null;
+
 // The order the Workbench is showing: the open saved order, otherwise the blank draft.
 function getOpenOrder() {
   return WORK_ORDERS_DATA[currentOrderIndex] || draftOrder;
 }
 
 // Guard for actions that need a SAVED order (print, bill, release, edit details...); menu items stay clickable.
-function requireOpenOrder() {
+function requireOpenOrder(allowWhileEditing) {
+  if (headerEditUid && !allowWhileEditing) {
+    showToast("Save or cancel your changes to the order details first.", "error");
+    return false;
+  }
   if (WORK_ORDERS_DATA[currentOrderIndex]) return true;
   showToast(draftOrder ? "Save this work order first (add a line item or press Save)." : "Open or create a work order first.", "error");
   return false;
@@ -317,10 +324,92 @@ function updateOrderCounts() {
   if (historyTabCountEl) historyTabCountEl.textContent = WORK_ORDERS_DATA.length;
 }
 
+// ---------------------------------------------------------------- editing order details in place
+// Older orders keep dates as DD/MM/YYYY, newer ones as YYYY-MM-DD. A date picker needs YYYY-MM-DD, so convert
+// on the way in, and on the way out save in whichever format that order already used.
+function toInputDate(value) {
+  const slash = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value || "");
+  if (slash) return `${slash[3]}-${slash[2]}-${slash[1]}`;
+  return /^\d{4}-\d{2}-\d{2}$/.test(value || "") ? value : "";
+}
+function fromInputDate(iso, originalValue) {
+  if (!iso) return "";
+  return /^\d{2}\/\d{2}\/\d{4}$/.test(originalValue || "") ? iso.split("-").reverse().join("/") : iso;
+}
+
+// Selects a value; if this order has one the list doesn't offer, add it so saving never silently changes it
+function setSelectValue(select, value) {
+  select.querySelectorAll("option[data-extra]").forEach((o) => o.remove());
+  if (value && ![...select.options].some((o) => o.value === value)) {
+    const extra = new Option(value, value);
+    extra.dataset.extra = "1";
+    select.add(extra);
+  }
+  select.value = value || select.options[0].value;
+}
+
+function startHeaderEdit() {
+  if (headerEditUid) return;
+  if (!requireOpenOrder(true)) return;
+  const order = WORK_ORDERS_DATA[currentOrderIndex];
+  if (getComputedStyle(document.getElementById("workbenchView")).display === "none") {
+    document.getElementById("tabWorkbench").click();       // e.g. started from the Menu while on another tab
+  }
+  const set = (id, value) => { document.getElementById(id).value = value; };
+  set("editWoId", order.id);
+  set("editDocRef", order.docRef);
+  set("editVendorCode", order.vendorCode);
+  set("editVendorSub", order.vendorSub);
+  set("editIssueDate", toInputDate(order.issueDate));
+  set("editDeliveryTarget", toInputDate(order.deliveryTarget));
+  set("editDestination", order.destination);
+  setSelectValue(document.getElementById("editQualityGate"), order.qualityGate || "TC: YES");
+  setSelectValue(document.getElementById("editStatus"), order.status);
+  headerEditUid = order.uid;
+  document.querySelector(".wo-header-card").classList.add("is-editing");
+  document.getElementById("editVendorCode").focus();
+}
+
+function endHeaderEdit() {
+  headerEditUid = null;
+  const card = document.querySelector(".wo-header-card");
+  if (card) card.classList.remove("is-editing");
+}
+
+function saveHeaderEdit(e) {
+  e.preventDefault();
+  const order = WORK_ORDERS_DATA.find((o) => o.uid === headerEditUid);
+  if (!order) { endHeaderEdit(); return; }
+
+  const newId = document.getElementById("editWoId").value.trim();
+  if (WORK_ORDERS_DATA.some((o) => o !== order && o.id === newId)) {
+    showToast(`Another work order already has the number #${newId}.`, "error");
+    document.getElementById("editWoId").focus();
+    return;
+  }
+
+  const get = (id) => document.getElementById(id).value.trim();
+  order.id = newId;
+  order.docRef = get("editDocRef");
+  order.vendorCode = get("editVendorCode");
+  order.vendorSub = get("editVendorSub");
+  order.issueDate = fromInputDate(get("editIssueDate"), order.issueDate);
+  order.deliveryTarget = fromInputDate(get("editDeliveryTarget"), order.deliveryTarget);
+  order.destination = get("editDestination");
+  order.qualityGate = document.getElementById("editQualityGate").value;
+  order.status = document.getElementById("editStatus").value;
+
+  persistOrders(order);
+  endHeaderEdit();
+  renderWorkOrder();
+  showToast(`Work Order #${order.id} updated!`);
+}
+
 function renderWorkOrder() {
   const saved = WORK_ORDERS_DATA[currentOrderIndex];
   if (!saved) ensureDraft();
   const order = getOpenOrder();
+  if (headerEditUid && (!saved || saved.uid !== headerEditUid)) endHeaderEdit();   // another order was opened
   const view = document.getElementById("workbenchView");
   if (view) view.classList.toggle("is-draft", !saved);   // no saved order open: show the blank new work order
 
@@ -1084,48 +1173,11 @@ document.addEventListener("DOMContentLoaded", () => {
     showToast(`Updated item ${item.partNo} successfully!`);
   });
 
-  // Edit Header Modal Handlers
-  const editHeaderModal = document.getElementById("editHeaderModal");
-  document.getElementById("editOrderHeaderBtn").addEventListener("click", () => {
-    if (!requireOpenOrder()) return;
-    const order = WORK_ORDERS_DATA[currentOrderIndex];
-    document.getElementById("editWoId").value = order.id;
-    document.getElementById("editDocRef").value = order.docRef;
-    document.getElementById("editVendorCode").value = order.vendorCode;
-    document.getElementById("editVendorSub").value = order.vendorSub;
-    document.getElementById("editIssueDate").value = order.issueDate;
-    document.getElementById("editDeliveryTarget").value = order.deliveryTarget;
-    document.getElementById("editDestination").value = order.destination;
-    document.getElementById("editQualityGate").value = order.qualityGate || "TC: YES";
-    document.getElementById("editStatus").value = order.status;
-    editHeaderModal.classList.add("open");
-  });
-
-  document.getElementById("closeEditHeaderModal").addEventListener("click", () => {
-    editHeaderModal.classList.remove("open");
-  });
-  document.getElementById("cancelEditHeader").addEventListener("click", () => {
-    editHeaderModal.classList.remove("open");
-  });
-
-  document.getElementById("editHeaderForm").addEventListener("submit", (e) => {
-    e.preventDefault();
-    const order = WORK_ORDERS_DATA[currentOrderIndex];
-    order.id = document.getElementById("editWoId").value.trim();
-    order.docRef = document.getElementById("editDocRef").value.trim();
-    order.vendorCode = document.getElementById("editVendorCode").value.trim();
-    order.vendorSub = document.getElementById("editVendorSub").value.trim();
-    order.issueDate = document.getElementById("editIssueDate").value.trim();
-    order.deliveryTarget = document.getElementById("editDeliveryTarget").value.trim();
-    order.destination = document.getElementById("editDestination").value.trim();
-    order.qualityGate = document.getElementById("editQualityGate").value;
-    order.status = document.getElementById("editStatus").value;
-
-    persistOrders(order);
-    renderWorkOrder();
-    editHeaderModal.classList.remove("open");
-    showToast(`Work Order #${order.id} updated!`);
-  });
+  // Edit order details in place (header card): Edit Order -> the values become inputs -> Save / Cancel
+  document.getElementById("editOrderHeaderBtn").addEventListener("click", startHeaderEdit);
+  document.getElementById("cancelHeaderEdit").addEventListener("click", endHeaderEdit);
+  document.getElementById("editHeaderForm").addEventListener("submit", saveHeaderEdit);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && headerEditUid) endHeaderEdit(); });
 
   // Action Buttons
   document.getElementById("saveDraftBtn").addEventListener("click", () => {

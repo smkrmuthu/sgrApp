@@ -3042,3 +3042,24 @@ html.auth-locked body > *:not(#loginGate):not(script):not(style):not(link) {
   .draft-grid { grid-template-columns: 1fr; }
   .draft-span-2 { grid-column: auto; }
 }
+
+/* ---------------------------------------------------------------- Editing order details in place */
+.wo-header-card .edit-only { display: none; }
+.wo-header-card.is-editing .view-only { display: none !important; }
+.wo-header-card.is-editing .edit-only { display: block; }
+.wo-header-card.is-editing .edit-only.inline-edit { display: inline-flex; }
+.wo-header-card.is-editing .wo-actions-group.edit-only { display: flex; }
+
+.wo-header-card.is-editing {
+  border-color: var(--color-forest-500);
+  box-shadow: 0 0 0 3px rgba(60, 127, 95, 0.18);
+}
+
+.wo-header-card .form-control { width: 100%; box-sizing: border-box; }
+.wo-header-card .meta-item .form-control + .form-control { margin-top: 6px; }
+
+.wo-number-edit { align-items: center; gap: 4px; }
+.wo-number-edit .form-control { width: 170px; font-weight: 700; }
+.edit-hash { font-size: 20px; font-weight: 800; }
+.wo-identifier .form-control#editDocRef { width: 220px; }
+.wo-identifier .form-control#editStatus { width: auto; min-width: 270px; }

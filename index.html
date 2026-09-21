@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=11" />
+  <link rel="stylesheet" href="style.css?v=12" />
 </head>
 <body>
   <!-- TOP APP BAR -->
@@ -237,7 +237,7 @@
               <label for="draftQualityGate">Quality Gate Test Cert</label>
               <select id="draftQualityGate" class="form-control">
                 <option value="YES">TC: YES (Mandatory)</option>
-                <option value="NO">TC: OPTIONAL</option>
+                <option value="OPTIONAL">TC: OPTIONAL</option>
               </select>
             </div>
             <div class="form-group">
@@ -257,15 +257,24 @@
 
     <!-- WORK ORDER HEADER & ACTIONS RIBBON -->
     <section class="wo-header-card">
+      <form id="editHeaderForm" autocomplete="off"></form>
       <div class="wo-title-strip">
         <div class="wo-identifier">
           <span class="wo-label">Work Order</span>
-          <h1 class="wo-number" id="displayWoNumber">#343/2026-27</h1>
-          <span class="doc-ref-badge" id="displayDocRef">DOC REF: SGR-MKT-02</span>
-          <span class="status-badge status-confirmed" id="displayStatusBadge">
+          <h1 class="wo-number view-only" id="displayWoNumber">#343/2026-27</h1>
+          <span class="edit-only inline-edit wo-number-edit"><span class="edit-hash">#</span><input type="text" id="editWoId" form="editHeaderForm" class="form-control" required aria-label="Work order number" /></span>
+          <span class="doc-ref-badge view-only" id="displayDocRef">DOC REF: SGR-MKT-02</span>
+          <input type="text" id="editDocRef" form="editHeaderForm" class="form-control edit-only" required aria-label="Document reference" />
+          <span class="status-badge status-confirmed view-only" id="displayStatusBadge">
             <span class="dot"></span> CONFIRMED — READY FOR FLOOR
           </span>
-          <span class="delivery-target-chip" id="displayDeliveryChip">
+          <select id="editStatus" form="editHeaderForm" class="form-control edit-only" aria-label="Work order status">
+            <option value="CONFIRMED — READY FOR FLOOR">CONFIRMED — READY FOR FLOOR</option>
+            <option value="RELEASED — IN PRODUCTION">RELEASED — IN PRODUCTION</option>
+            <option value="DRAFT">DRAFT</option>
+            <option value="COMPLETED — READY FOR DISPATCH">COMPLETED — READY FOR DISPATCH</option>
+          </select>
+          <span class="delivery-target-chip view-only" id="displayDeliveryChip">
             <svg viewBox="0 0 20 20" fill="currentColor" class="chip-icon">
               <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
             </svg>
@@ -273,7 +282,12 @@
           </span>
         </div>
 
-        <div class="wo-actions-group">
+        <div class="wo-actions-group edit-only">
+          <button type="button" class="action-btn action-secondary" id="cancelHeaderEdit">CANCEL</button>
+          <button type="submit" form="editHeaderForm" class="action-btn action-primary" id="saveHeaderEdit">SAVE CHANGES</button>
+        </div>
+
+        <div class="wo-actions-group view-only">
           <button class="action-btn action-secondary" id="editOrderHeaderBtn" title="Edit Order Details">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -323,25 +337,30 @@
       <div class="wo-meta-grid">
         <div class="meta-item">
           <div class="meta-label">VENDOR CODE</div>
-          <div class="meta-value-main" id="metaVendorCode">CCPB00002</div>
-          <div class="meta-sub" id="metaVendorSub">SGR Division // Pkg</div>
+          <div class="meta-value-main view-only" id="metaVendorCode">CCPB00002</div>
+          <input type="text" id="editVendorCode" form="editHeaderForm" class="form-control edit-only" required aria-label="Vendor code" />
+          <div class="meta-sub view-only" id="metaVendorSub">SGR Division // Pkg</div>
+          <input type="text" id="editVendorSub" form="editHeaderForm" class="form-control edit-only" placeholder="Division / sub-category" aria-label="Vendor division" />
         </div>
 
         <div class="meta-item">
           <div class="meta-label">ORDER ISSUE DATE</div>
-          <div class="meta-value-main" id="metaIssueDate">16/09/2026</div>
+          <div class="meta-value-main view-only" id="metaIssueDate">16/09/2026</div>
+          <input type="date" id="editIssueDate" form="editHeaderForm" class="form-control edit-only" required aria-label="Order issue date" />
           <div class="meta-sub">Shift A (08:30 IST)</div>
         </div>
 
         <div class="meta-item highlight-alert">
           <div class="meta-label">DELIVERY TARGET</div>
-          <div class="meta-value-main text-danger" id="metaDeliveryTarget">21/09/2026 !</div>
+          <div class="meta-value-main text-danger view-only" id="metaDeliveryTarget">21/09/2026 !</div>
+          <input type="date" id="editDeliveryTarget" form="editHeaderForm" class="form-control edit-only" required aria-label="Delivery target date" />
           <div class="meta-sub">Strict Loading Schedule</div>
         </div>
 
         <div class="meta-item">
           <div class="meta-label">DELIVERY DESTINATION / CONSIGNEE</div>
-          <div class="meta-value-main" id="metaDestination">Chennai // APA Engineering</div>
+          <div class="meta-value-main view-only" id="metaDestination">Chennai // APA Engineering</div>
+          <input type="text" id="editDestination" form="editHeaderForm" class="form-control edit-only" required aria-label="Delivery destination" />
           <div class="meta-sub">Dedicated Truck // Direct SIPCOT Line</div>
         </div>
 
@@ -349,6 +368,14 @@
           <div class="meta-label">REVISION & STANDARD</div>
           <div class="meta-value-main" id="metaRevision">Rev 00, Dt: 01/08/22</div>
           <div class="meta-sub text-fsc">ISO 9001 / FSC Certified</div>
+        </div>
+
+        <div class="meta-item edit-only">
+          <div class="meta-label">QUALITY GATE TEST CERT</div>
+          <select id="editQualityGate" form="editHeaderForm" class="form-control">
+            <option value="TC: YES">TC: YES (Test Cert Mandatory)</option>
+            <option value="TC: OPTIONAL">TC: OPTIONAL</option>
+          </select>
         </div>
       </div>
     </section>
@@ -1161,90 +1188,6 @@
   </div>
 
   <!-- EDIT WORK ORDER HEADER MODAL -->
-  <div class="modal-backdrop" id="editHeaderModal">
-    <div class="modal-dialog">
-      <div class="modal-header">
-        <div class="modal-title-wrap">
-          <div class="modal-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-            </svg>
-          </div>
-          <div>
-            <h3>Edit Work Order Details</h3>
-            <p>Update vendor, delivery deadlines, destinations, and quality standards</p>
-          </div>
-        </div>
-        <button class="modal-close-btn" id="closeEditHeaderModal">&times;</button>
-      </div>
-
-      <form id="editHeaderForm" class="modal-form">
-        <div class="form-row-2">
-          <div class="form-group">
-            <label>Work Order ID</label>
-            <input type="text" id="editWoId" class="form-control" required />
-          </div>
-          <div class="form-group">
-            <label>Document Reference</label>
-            <input type="text" id="editDocRef" class="form-control" required />
-          </div>
-        </div>
-
-        <div class="form-row-2">
-          <div class="form-group">
-            <label>Vendor Code</label>
-            <input type="text" id="editVendorCode" class="form-control" required />
-          </div>
-          <div class="form-group">
-            <label>Vendor Division</label>
-            <input type="text" id="editVendorSub" class="form-control" />
-          </div>
-        </div>
-
-        <div class="form-row-2">
-          <div class="form-group">
-            <label>Order Issue Date</label>
-            <input type="text" id="editIssueDate" class="form-control" placeholder="DD/MM/YYYY" required />
-          </div>
-          <div class="form-group">
-            <label>Delivery Target Date</label>
-            <input type="text" id="editDeliveryTarget" class="form-control" placeholder="DD/MM/YYYY" required />
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>Delivery Destination / Consignee</label>
-          <input type="text" id="editDestination" class="form-control" required />
-        </div>
-
-        <div class="form-row-2">
-          <div class="form-group">
-            <label>Quality Gate Test Cert</label>
-            <select id="editQualityGate" class="form-control">
-              <option value="TC: YES">TC: YES (Test Cert Mandatory)</option>
-              <option value="TC: OPTIONAL">TC: OPTIONAL</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Work Order Status</label>
-            <select id="editStatus" class="form-control">
-              <option value="CONFIRMED — READY FOR FLOOR">CONFIRMED — READY FOR FLOOR</option>
-              <option value="RELEASED — IN PRODUCTION">RELEASED — IN PRODUCTION</option>
-              <option value="DRAFT">DRAFT</option>
-              <option value="COMPLETED — READY FOR DISPATCH">COMPLETED — READY FOR DISPATCH</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button type="button" class="btn-cancel" id="cancelEditHeader">Cancel</button>
-          <button type="submit" class="btn-create">Update Order Details</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
   <!-- GST TAX INVOICE & BILL MODAL -->
   <div class="modal-backdrop" id="taxInvoiceModal">
     <div class="modal-dialog print-preview-dialog invoice-modal-dialog">
@@ -1482,9 +1425,9 @@
           integrity="sha384-iLddHTLokph6Omwoyid4XKxHaWa6w41BnoEj0q5oOrzmYPpHIKt1wyjReA7s//pP"
           crossorigin="anonymous"></script>
   <script src="storage.js?v=2"></script>
-  <script src="db.js?v=4"></script>
+  <script src="db.js?v=5"></script>
   <script src="users.js?v=3"></script>
-  <script src="app.js?v=13"></script>
+  <script src="app.js?v=14"></script>
 
   <!-- INLINE TAB SWITCHING — Guaranteed to work independent of app.js load state -->
   <script>
