@@ -316,7 +316,20 @@ function renderWorkOrder() {
   const tbody = document.getElementById("itemsTableBody");
   tbody.innerHTML = "";
 
-  order.items.forEach((item, index) => {
+  if (!order.items || order.items.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="12" style="text-align: center; padding: 48px 16px; background: var(--color-white); color: var(--color-ink-600);">
+          <div style="font-weight: 700; font-size: 14px; color: var(--color-ink-800); margin-bottom: 4px;">No Line Items in this Work Order</div>
+          <div style="font-size: 12px; color: var(--color-ink-500); margin-bottom: 14px;">Key in your part numbers, dimensions, quantities, and rates below to add line items.</div>
+          <button type="button" class="btn-primary" onclick="document.getElementById('itemPartNo')?.focus()" style="padding: 7px 16px; font-size: 12px; cursor: pointer; border-radius: 4px; background: var(--color-forest-800); color: #fff; border: none; font-weight: 600;">
+            + Add First Line Item
+          </button>
+        </td>
+      </tr>
+    `;
+  } else {
+    order.items.forEach((item, index) => {
     const itemQty = Number(item.qty) || 0;
     const itemLen = Number(item.lengthMm) || 0;
     const runningMtr = Math.round((itemQty * itemLen) / 1000);
@@ -377,6 +390,7 @@ function renderWorkOrder() {
     `;
     tbody.appendChild(tr);
   });
+  }
 
   // Update KPI Tiles
   document.getElementById("kpiTotalQty").textContent = formatNum(totalQty);
@@ -767,23 +781,7 @@ document.addEventListener("DOMContentLoaded", () => {
         { id: 3, role: "General Manager / JMD", person: "Executive Authorisation", status: "Pending", time: "-", verified: false },
         { id: 4, role: "Warehouse Gate & Dispatch", person: "Vehicle Loading Inspection", status: "Pending Loading", time: "-", verified: false }
       ],
-      items: [
-        {
-          id: `item-${Date.now()}`,
-          partNo: "EB080600001",
-          description: "EB 80 X 80 X 6 X 1000 mm",
-          subDesc: "Initial line item",
-          profile: "EB 80 X 80 X 6",
-          lengthMm: 1000,
-          qty: 1000,
-          uom: "NOS",
-          weight: 650,
-          category: "Standard Angle",
-          price: 45.00,
-          remarks: "Standard Kraft Spec",
-          custRef: `${vendorCode}-L1`
-        }
-      ]
+      items: []
     };
 
     WORK_ORDERS_DATA.push(newOrder);
