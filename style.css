@@ -3063,3 +3063,17 @@ html.auth-locked body > *:not(#loginGate):not(script):not(style):not(link) {
 .edit-hash { font-size: 20px; font-weight: 800; }
 .wo-identifier .form-control#editDocRef { width: 220px; }
 .wo-identifier .form-control#editStatus { width: auto; min-width: 270px; }
+
+/* ---------------------------------------------------------------- Quick Line Add sits inside the table, above the Grand Totals */
+.schedule-table td.quick-add-cell { padding: 0; border-bottom: 0; }
+.schedule-table tbody tr.quick-add-row:hover { background: transparent; }
+/* The form must not resize the table columns above it, so it takes no width of its own (width:0) and is stretched to
+   the row (min-width:100%). fitQuickAddWidth() in app.js then sets --qa-width to the visible table area, and sticky keeps
+   the bar pinned to the left, so on a narrow screen it stays screen-wide and wraps instead of scrolling away with the table. */
+.schedule-table .quick-add-form {
+  position: sticky;
+  left: 0;
+  width: var(--qa-width, 0);
+  min-width: var(--qa-width, 100%);
+  box-sizing: border-box;
+}

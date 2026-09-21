@@ -1848,6 +1848,18 @@ window.deleteOrderFromHistory = function(idx) {
   }
 };
 
+// Keeps the Quick Line Add bar as wide as the visible table area (see the note in style.css)
+function fitQuickAddWidth() {
+  const container = document.querySelector(".table-container");
+  const form = document.getElementById("quickAddForm");
+  if (container && form && container.clientWidth) form.style.setProperty("--qa-width", `${container.clientWidth}px`);
+}
+document.addEventListener("DOMContentLoaded", () => {
+  const container = document.querySelector(".table-container");
+  if (container && window.ResizeObserver) new ResizeObserver(fitQuickAddWidth).observe(container);
+  fitQuickAddWidth();
+});
+
 // Shared database: sign-in, sync and pulling other people's changes (no-op until Supabase is configured)
 document.addEventListener("DOMContentLoaded", () => {
   Cloud.start({
