@@ -327,8 +327,12 @@ function renderWorkOrder() {
   // Render Audit Steps
   renderAuditChain();
 
-  // Update Orders drawer count
-  document.getElementById("totalOrdersCount").textContent = WORK_ORDERS_DATA.length;
+  // Update Orders drawer & menu count
+  const ordersCountEl = document.getElementById("totalOrdersCount");
+  if (ordersCountEl) ordersCountEl.textContent = WORK_ORDERS_DATA.length;
+
+  const menuOrdersCountEl = document.getElementById("menuOrdersCount");
+  if (menuOrdersCountEl) menuOrdersCountEl.textContent = `${WORK_ORDERS_DATA.length} Active`;
 }
 
 // Render Audit Chain
