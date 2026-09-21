@@ -1323,6 +1323,30 @@ button, input, select, textarea {
   background: var(--color-forest-600);
 }
 
+.quick-add-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.btn-tfoot-bill {
+  background: #047857;
+  color: #ffffff;
+  border: 1px solid #065f46;
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s ease;
+}
+
+.btn-tfoot-bill:hover {
+  background: #065f46;
+}
+
 /* ==========================================================================
    DUAL BOTTOM SECTION
    ========================================================================== */
