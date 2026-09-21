@@ -3,8 +3,9 @@
  * Real-time calculation, scheduling, audit chain & memo printing
  */
 
-// Initial Sample Work Orders Store matching sample sheet and whiteboard
-const WORK_ORDERS_DATA = [
+// Sample Work Orders matching sample sheet and whiteboard. Used only on first run;
+// after that the orders saved in the browser (see storage.js) are the source of truth.
+const SEED_WORK_ORDERS = [
   {
     id: "343/2026-27",
     docRef: "DOC REF: SGR-MKT-02",
@@ -148,8 +149,26 @@ const WORK_ORDERS_DATA = [
   }
 ];
 
+// Live Work Orders, loaded from browser storage (falls back to the sample data on first run)
+const WORK_ORDERS_DATA = OrderStore.load(SEED_WORK_ORDERS);
+
 // Current Active Work Order Pointer
 let currentOrderIndex = 0;
+
+// Single funnel for saving: call after every change to WORK_ORDERS_DATA
+let storageWarned = false;
+function persistOrders() {
+  if (OrderStore.save(WORK_ORDERS_DATA)) return;
+  if (storageWarned) return;
+  storageWarned = true;
+  showToast("Could not save changes in this browser (storage full or blocked). Changes will be lost on refresh.", "error");
+}
+
+// Next work order number = highest existing "NNN/" prefix + 1 (safe after deletions)
+function nextOrderNumber() {
+  const nums = WORK_ORDERS_DATA.map(wo => parseInt(String(wo.id).split("/")[0], 10)).filter(n => !isNaN(n));
+  return (nums.length ? Math.max(...nums) : 342) + 1;
+}
 
 // Helper: Format Numbers with Commas
 function formatNum(num) {
@@ -172,7 +191,7 @@ function showToast(message, type = "success") {
   const toast = document.createElement("div");
   toast.className = "toast";
   toast.innerHTML = `
-    <svg viewBox="0 0 20 20" fill="currentColor" style="width: 18px; height: 18px; color: #10b981; flex-shrink: 0;">
+    <svg viewBox="0 0 20 20" fill="currentColor" style="width: 18px; height: 18px; color: ${type === 'error' ? '#ef4444' : '#10b981'}; flex-shrink: 0;">
       <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
     </svg>
     <span>${message}</span>
@@ -413,6 +432,7 @@ document.getElementById("quickAddForm").addEventListener("submit", function(e) {
   };
 
   order.items.push(newItem);
+  persistOrders();
   renderWorkOrder();
   showToast(`Item ${partNo} added to Work Order #${order.id}!`);
 
@@ -428,6 +448,7 @@ window.deleteItem = function(index) {
   const order = WORK_ORDERS_DATA[currentOrderIndex];
   if (confirm(`Remove item ${order.items[index].partNo}?`)) {
     const deleted = order.items.splice(index, 1);
+    persistOrders();
     renderWorkOrder();
     showToast(`Removed ${deleted[0].partNo}`);
   }
@@ -441,6 +462,7 @@ window.duplicateItem = function(index) {
   cloned.id = `item-${Date.now()}`;
   cloned.partNo += "-COPY";
   order.items.push(cloned);
+  persistOrders();
   renderWorkOrder();
   showToast(`Cloned line item as ${cloned.partNo}`);
 };
@@ -631,7 +653,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // New Work Order Modal
   const newWoModal = document.getElementById("newWoModal");
   document.getElementById("newWorkOrderBtn").addEventListener("click", () => {
-    const nextId = (343 + WORK_ORDERS_DATA.length) + "/2026-27";
+    const nextId = nextOrderNumber() + "/2026-27";
     document.getElementById("newWoNum").value = `#${nextId}`;
     const today = new Date().toISOString().split("T")[0];
     document.getElementById("newIssueDate").value = today;
@@ -699,6 +721,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     WORK_ORDERS_DATA.push(newOrder);
     currentOrderIndex = WORK_ORDERS_DATA.length - 1;
+    persistOrders();
     renderWorkOrder();
     newWoModal.classList.remove("open");
     showToast(`Work Order #${woNum} created successfully!`);
@@ -733,6 +756,7 @@ document.addEventListener("DOMContentLoaded", () => {
     item.profile = extractProfileFromDesc(item.description);
     item.subDesc = `Length: ${item.lengthMm} mm // UOM: ${item.uom}`;
 
+    persistOrders();
     renderWorkOrder();
     editItemModal.classList.remove("open");
     showToast(`Updated item ${item.partNo} successfully!`);
@@ -774,6 +798,7 @@ document.addEventListener("DOMContentLoaded", () => {
     order.qualityGate = document.getElementById("editQualityGate").value;
     order.status = document.getElementById("editStatus").value;
 
+    persistOrders();
     renderWorkOrder();
     editHeaderModal.classList.remove("open");
     showToast(`Work Order #${order.id} updated!`);
@@ -792,6 +817,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("releaseFloorBtn").addEventListener("click", () => {
     const order = WORK_ORDERS_DATA[currentOrderIndex];
     order.status = "RELEASED — IN PRODUCTION";
+    persistOrders();
     showToast(`Work Order #${order.id} released to Production & Finishing Line 02!`);
     renderWorkOrder();
   });
@@ -917,6 +943,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const now = new Date();
     step.time = `${now.toLocaleDateString("en-GB")} ${now.toLocaleTimeString("en-GB", { hour: '2-digit', minute: '2-digit' })}`;
 
+    persistOrders();
     renderAuditChain();
     signModal.classList.remove("open");
     showToast(`Digitally signed and sealed by ${step.person}!`);
@@ -1196,6 +1223,7 @@ window.deleteOrderFromHistory = function(idx) {
     if (currentOrderIndex >= WORK_ORDERS_DATA.length) {
       currentOrderIndex = Math.max(0, WORK_ORDERS_DATA.length - 1);
     }
+    persistOrders();
     renderHistoryTable();
     showToast(`Deleted Work Order #${wo.id}`);
   }
