@@ -897,51 +897,274 @@ document.addEventListener("DOMContentLoaded", () => {
     showToast("ISO Compliance & Cryptographic audit checksum re-verified OK.");
   });
 
-  // Global Search
+  // Global Search Controller with live suggestions dropdown & keyboard navigation
   const searchInput = document.getElementById("globalSearchInput");
+  const searchResultsDropdown = document.getElementById("globalSearchResults");
+  let selectedSuggestionIndex = -1;
+
+  function escapeHtml(str) {
+    if (!str) return "";
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function highlightSearchText(text, q) {
+    if (!text) return "";
+    const str = String(text);
+    if (!q) return escapeHtml(str);
+    const escapedQ = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${escapedQ})`, "gi");
+    return escapeHtml(str).replace(regex, `<span class="search-hl">$1</span>`);
+  }
+
+  function renderSearchSuggestions(query) {
+    if (!searchResultsDropdown) return;
+    const q = (query || "").trim();
+    selectedSuggestionIndex = -1;
+
+    if (!q) {
+      // Empty input: show quick suggestion filters and recent orders
+      const recentOrders = WORK_ORDERS_DATA.slice(-3).reverse();
+      let html = `
+        <div class="search-quick-tags-section">
+          <div class="search-quick-title">Quick Search Filters</div>
+          <div class="search-quick-tags">
+            <span class="search-quick-tag" data-filter="CONFIRMED">Status: Confirmed</span>
+            <span class="search-quick-tag" data-filter="RELEASED">Status: In Production</span>
+            <span class="search-quick-tag" data-filter="EB 80">Profile: EB 80</span>
+            <span class="search-quick-tag" data-filter="Chennai">Dest: Chennai</span>
+            <span class="search-quick-tag" data-filter="Indore">Dest: Indore</span>
+          </div>
+        </div>
+      `;
+
+      if (recentOrders.length > 0) {
+        html += `
+          <div class="search-dropdown-header">
+            <span>Recent Work Orders</span>
+            <span class="search-count-badge">${recentOrders.length}</span>
+          </div>
+        `;
+        recentOrders.forEach(wo => {
+          const originalIdx = WORK_ORDERS_DATA.indexOf(wo);
+          let statusClass = "status-confirmed";
+          if (wo.status === "DRAFT") statusClass = "status-draft";
+          if (wo.status && wo.status.includes("RELEASED")) statusClass = "status-released";
+
+          let totalAmt = 0;
+          (wo.items || []).forEach(it => { totalAmt += (Number(it.qty) || 0) * (Number(it.price) || 0); });
+          const itemsSummary = (wo.items || []).map(it => `${it.qty || 0} NOS ${it.profile || it.description || ''}`).slice(0, 2).join(" · ");
+
+          html += `
+            <div class="search-result-item" data-order-idx="${originalIdx}">
+              <div class="search-result-row-top">
+                <span class="search-result-wo-id">#${wo.id}</span>
+                <span class="search-result-status ${statusClass}">${wo.status || 'CONFIRMED'}</span>
+              </div>
+              <div class="search-result-row-mid">
+                <span class="search-result-dest">${wo.destination || 'Plant Direct'}</span>
+                <span class="search-result-amount">₹${formatNum(totalAmt)}</span>
+              </div>
+              <div class="search-result-row-bot">
+                <span class="search-result-items-snippet">${itemsSummary || 'Standard items'}</span>
+                <span>${wo.issueDate || ''}</span>
+              </div>
+            </div>
+          `;
+        });
+      }
+
+      html += `
+        <div class="search-dropdown-footer">
+          <span>Press ↑↓ to navigate</span>
+          <span>Press ↵ to open</span>
+        </div>
+      `;
+
+      searchResultsDropdown.innerHTML = html;
+      searchResultsDropdown.style.display = "block";
+      bindSearchDropdownEvents();
+      return;
+    }
+
+    // Has query: filter matching orders
+    const matches = [];
+    WORK_ORDERS_DATA.forEach((wo, idx) => {
+      if (matchesOrder(wo, q)) {
+        matches.push({ wo, originalIdx: idx });
+      }
+    });
+
+    if (matches.length === 0) {
+      searchResultsDropdown.innerHTML = `
+        <div class="search-empty-state">
+          <svg class="search-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <div style="font-weight: 600; color: var(--color-ink-800); margin-bottom: 2px;">No matching results</div>
+          <div>No work order found matching "<strong>${escapeHtml(q)}</strong>"</div>
+        </div>
+      `;
+      searchResultsDropdown.style.display = "block";
+      return;
+    }
+
+    let html = `
+      <div class="search-dropdown-header">
+        <span>Matching Work Orders</span>
+        <span class="search-count-badge">${matches.length} found</span>
+      </div>
+    `;
+
+    matches.forEach((item, matchIdx) => {
+      const { wo, originalIdx } = item;
+      let statusClass = "status-confirmed";
+      if (wo.status === "DRAFT") statusClass = "status-draft";
+      if (wo.status && wo.status.includes("RELEASED")) statusClass = "status-released";
+
+      let totalAmt = 0;
+      (wo.items || []).forEach(it => { totalAmt += (Number(it.qty) || 0) * (Number(it.price) || 0); });
+      const itemsSummary = (wo.items || []).map(it => `${it.qty || 0} NOS ${it.profile || it.description || ''}`).slice(0, 2).join(" · ");
+
+      html += `
+        <div class="search-result-item" data-order-idx="${originalIdx}" data-match-idx="${matchIdx}">
+          <div class="search-result-row-top">
+            <span class="search-result-wo-id">#${highlightSearchText(wo.id, q)}</span>
+            <span class="search-result-status ${statusClass}">${highlightSearchText(wo.status || 'CONFIRMED', q)}</span>
+          </div>
+          <div class="search-result-row-mid">
+            <span class="search-result-dest">${highlightSearchText(wo.destination || 'Plant Direct', q)}</span>
+            <span class="search-result-amount">₹${formatNum(totalAmt)}</span>
+          </div>
+          <div class="search-result-row-bot">
+            <span class="search-result-items-snippet">${highlightSearchText(itemsSummary, q)}</span>
+            <span>${highlightSearchText(wo.issueDate || '', q)}</span>
+          </div>
+        </div>
+      `;
+    });
+
+    html += `
+      <div class="search-dropdown-footer">
+        <span>Press ↑↓ to navigate</span>
+        <span>Press ↵ to open</span>
+      </div>
+    `;
+
+    searchResultsDropdown.innerHTML = html;
+    searchResultsDropdown.style.display = "block";
+    bindSearchDropdownEvents();
+  }
+
+  function bindSearchDropdownEvents() {
+    if (!searchResultsDropdown) return;
+    // Quick filter chips click
+    searchResultsDropdown.querySelectorAll(".search-quick-tag").forEach(tag => {
+      tag.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const filterVal = tag.getAttribute("data-filter");
+        if (searchInput) {
+          searchInput.value = filterVal;
+          renderSearchSuggestions(filterVal);
+          searchInput.focus();
+        }
+      });
+    });
+
+    // Result item click
+    searchResultsDropdown.querySelectorAll(".search-result-item").forEach(item => {
+      item.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const orderIdx = parseInt(item.getAttribute("data-order-idx"), 10);
+        if (!isNaN(orderIdx) && WORK_ORDERS_DATA[orderIdx]) {
+          openOrderFromSearch(orderIdx);
+        }
+      });
+    });
+  }
+
+  function openOrderFromSearch(orderIdx) {
+    if (typeof switchMainView === "function") switchMainView("workbench");
+    currentOrderIndex = orderIdx;
+    renderWorkOrder();
+    if (searchResultsDropdown) searchResultsDropdown.style.display = "none";
+    showToast(`Opened Work Order #${WORK_ORDERS_DATA[orderIdx].id} in Workbench`);
+  }
+
   if (searchInput) {
     window.addEventListener("keydown", (e) => {
       if (e.key === "/" && document.activeElement !== searchInput) {
         e.preventDefault();
         searchInput.focus();
+        renderSearchSuggestions(searchInput.value);
       }
     });
 
-    const performGlobalSearch = (trigger) => {
+    searchInput.addEventListener("focus", () => {
+      renderSearchSuggestions(searchInput.value);
+    });
+
+    searchInput.addEventListener("input", () => {
       const q = searchInput.value.toLowerCase().trim();
-      if (!q) return;
+      renderSearchSuggestions(q);
 
+      // If user is currently looking at the Past Work Orders tab, also sync search to that table
       const historyView = document.getElementById("historyView");
-      const isHistoryVisible = historyView && historyView.style.display !== "none";
-
-      // If user is currently looking at the Past Work Orders tab, sync search to that table
-      if (isHistoryVisible) {
+      if (historyView && historyView.style.display !== "none") {
         const histInput = document.getElementById("historySearchInput");
         if (histInput) {
           histInput.value = searchInput.value;
           renderHistoryTable();
         }
-        return;
       }
+    });
 
-      const matchIndex = WORK_ORDERS_DATA.findIndex(wo => matchesOrder(wo, q));
-      if (matchIndex !== -1) {
-        if (typeof switchMainView === "function") switchMainView("workbench");
-        currentOrderIndex = matchIndex;
-        renderWorkOrder();
-        if (trigger === "enter") {
-          showToast(`Jumped to Work Order #${WORK_ORDERS_DATA[matchIndex].id}`);
-        }
-      } else if (trigger === "enter") {
-        showToast(`No matching work order found for "${searchInput.value.trim()}"`, "error");
-      }
-    };
-
-    searchInput.addEventListener("input", () => performGlobalSearch("input"));
     searchInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
+      const items = searchResultsDropdown ? searchResultsDropdown.querySelectorAll(".search-result-item") : [];
+      
+      if (e.key === "ArrowDown") {
         e.preventDefault();
-        performGlobalSearch("enter");
+        if (items.length > 0) {
+          selectedSuggestionIndex = (selectedSuggestionIndex + 1) % items.length;
+          items.forEach((it, idx) => it.classList.toggle("selected", idx === selectedSuggestionIndex));
+          items[selectedSuggestionIndex].scrollIntoView({ block: "nearest" });
+        }
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        if (items.length > 0) {
+          selectedSuggestionIndex = (selectedSuggestionIndex - 1 + items.length) % items.length;
+          items.forEach((it, idx) => it.classList.toggle("selected", idx === selectedSuggestionIndex));
+          items[selectedSuggestionIndex].scrollIntoView({ block: "nearest" });
+        }
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        if (items.length > 0 && selectedSuggestionIndex >= 0 && selectedSuggestionIndex < items.length) {
+          const orderIdx = parseInt(items[selectedSuggestionIndex].getAttribute("data-order-idx"), 10);
+          if (!isNaN(orderIdx)) openOrderFromSearch(orderIdx);
+        } else {
+          const q = searchInput.value.toLowerCase().trim();
+          const matchIndex = WORK_ORDERS_DATA.findIndex(wo => matchesOrder(wo, q));
+          if (matchIndex !== -1) {
+            openOrderFromSearch(matchIndex);
+          } else if (q) {
+            showToast(`No matching work order found for "${searchInput.value.trim()}"`, "error");
+          }
+        }
+      } else if (e.key === "Escape") {
+        if (searchResultsDropdown) searchResultsDropdown.style.display = "none";
+      }
+    });
+
+    // Close dropdown on click outside
+    document.addEventListener("click", (e) => {
+      const box = document.getElementById("globalSearchBox");
+      if (searchResultsDropdown && !searchResultsDropdown.contains(e.target) && box && !box.contains(e.target)) {
+        searchResultsDropdown.style.display = "none";
       }
     });
   }

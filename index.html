@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=6" />
+  <link rel="stylesheet" href="style.css?v=7" />
 </head>
 <body>
   <!-- TOP APP BAR -->
@@ -51,13 +51,14 @@
 
     <!-- GLOBAL SEARCH -->
     <div class="header-center">
-      <div class="search-box">
+      <div class="search-box" id="globalSearchBox">
         <svg class="search-icon" viewBox="0 0 20 20" fill="currentColor">
           <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
         </svg>
-        <input type="text" id="globalSearchInput" placeholder="Search Work Orders / Items / Memos... (Press '/' to focus)" />
+        <input type="text" id="globalSearchInput" placeholder="Search Work Orders / Items / Memos... (Press '/' to focus)" autocomplete="off" />
         <kbd class="search-kbd">/</kbd>
       </div>
+      <div class="search-dropdown-results" id="globalSearchResults" style="display: none;"></div>
     </div>
 
     <div class="header-right">
@@ -1455,7 +1456,7 @@
   <script src="storage.js?v=2"></script>
   <script src="db.js?v=4"></script>
   <script src="users.js?v=3"></script>
-  <script src="app.js?v=7"></script>
+  <script src="app.js?v=8"></script>
 
   <!-- INLINE TAB SWITCHING — Guaranteed to work independent of app.js load state -->
   <script>
