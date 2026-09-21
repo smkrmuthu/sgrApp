@@ -625,13 +625,87 @@
 
     <!-- VIEW 2: SEARCHABLE PAST WORK ORDERS DIRECTORY -->
     <div id="historyView" class="view-panel">
+      <!-- SUMMARY METRIC STRIP FOR PAST ORDERS -->
+      <section class="history-kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">TOTAL ORDERS RECORDED</span>
+            <div class="kpi-icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+            </div>
+          </div>
+          <div class="kpi-metric-val" id="histKpiTotalOrders">3</div>
+          <div class="kpi-metric-unit">Active Database Records</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">TOTAL VOLUME RUN</span>
+            <div class="kpi-icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 6h18M3 12h18M3 18h18M7 3v18M17 3v18"/>
+              </svg>
+            </div>
+          </div>
+          <div class="kpi-metric-val" id="histKpiTotalMeters">7,299</div>
+          <div class="kpi-metric-unit">Running Meters</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">NET BOARD TONNAGE</span>
+            <div class="kpi-icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 3v18M6 8l6-5 6 5M4 14l8-4 8 4M6 20h12"/>
+              </svg>
+            </div>
+          </div>
+          <div class="kpi-metric-val" id="histKpiTotalWeight">4,084</div>
+          <div class="kpi-metric-unit">Kgs Kraft Processed</div>
+        </div>
+
+        <div class="kpi-card highlight-kpi">
+          <div class="kpi-header">
+            <span class="kpi-title">TOTAL ORDER BOOK</span>
+            <div class="kpi-icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="5" width="20" height="14" rx="2"/>
+                <line x1="2" y1="10" x2="22" y2="10"/>
+              </svg>
+            </div>
+          </div>
+          <div class="kpi-metric-val text-green" id="histKpiTotalAmount">₹3,04,250</div>
+          <div class="kpi-metric-unit">Combined Order Value</div>
+        </div>
+      </section>
+
+      <!-- DIRECTORY MAIN CARD -->
       <section class="history-directory-card">
         <div class="directory-top-bar">
           <div class="directory-title-wrap">
             <h2 class="directory-title">PAST WORK ORDERS DIRECTORY</h2>
-            <p class="directory-subtitle">Search, filter, review, and print all manufacturing work orders</p>
+            <p class="directory-subtitle">Search, filter, open, review, and print all manufacturing work orders</p>
           </div>
           <div class="directory-actions">
+            <!-- View Toggle -->
+            <div class="view-toggle-wrap">
+              <button class="toggle-btn active" id="btnViewCards" title="Grid Card View">
+                <svg viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+                  <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+                </svg>
+                <span>Cards</span>
+              </button>
+              <button class="toggle-btn" id="btnViewTable" title="Tabular Data View">
+                <svg viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+                  <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/>
+                </svg>
+                <span>Table</span>
+              </button>
+            </div>
+
             <button class="action-btn action-primary" id="btnHistoryNewOrder">
               <svg viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
                 <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
@@ -647,7 +721,7 @@
             <svg class="search-icon" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
             </svg>
-            <input type="text" id="historySearchInput" placeholder="Filter by Work Order #, Customer, Destination, Vendor Code, or Part #..." />
+            <input type="text" id="historySearchInput" placeholder="Instant Search by Work Order #, Customer, Destination, Vendor Code, or Part #..." />
           </div>
 
           <div class="filter-dropdowns">
@@ -667,8 +741,13 @@
           </div>
         </div>
 
-        <!-- PAST ORDERS TABLE -->
-        <div class="table-container">
+        <!-- PAST ORDERS CARD GRID CONTAINER -->
+        <div class="history-cards-grid" id="historyCardsContainer">
+          <!-- Dynamically populated card items -->
+        </div>
+
+        <!-- PAST ORDERS TABLE CONTAINER (TOGGLEABLE) -->
+        <div class="table-container history-table-wrap" id="historyTableContainer" style="display: none;">
           <table class="schedule-table history-table" id="historyTable">
             <thead>
               <tr>

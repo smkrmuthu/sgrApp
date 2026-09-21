@@ -837,6 +837,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const historyView = document.getElementById("historyView");
 
   function switchView(viewName) {
+    // Reset scroll to top immediately so user sees full view
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
     if (viewName === "workbench") {
       tabWorkbench.classList.add("active");
       tabHistory.classList.remove("active");
@@ -854,6 +856,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
   tabWorkbench.addEventListener("click", () => switchView("workbench"));
   tabHistory.addEventListener("click", () => switchView("history"));
+
+  // View Mode Toggle (Cards vs Table)
+  const btnViewCards = document.getElementById("btnViewCards");
+  const btnViewTable = document.getElementById("btnViewTable");
+  const historyCardsContainer = document.getElementById("historyCardsContainer");
+  const historyTableContainer = document.getElementById("historyTableContainer");
+
+  if (btnViewCards && btnViewTable) {
+    btnViewCards.addEventListener("click", () => {
+      btnViewCards.classList.add("active");
+      btnViewTable.classList.remove("active");
+      if (historyCardsContainer) historyCardsContainer.style.display = "grid";
+      if (historyTableContainer) historyTableContainer.style.display = "none";
+    });
+
+    btnViewTable.addEventListener("click", () => {
+      btnViewTable.classList.add("active");
+      btnViewCards.classList.remove("active");
+      if (historyCardsContainer) historyCardsContainer.style.display = "none";
+      if (historyTableContainer) historyTableContainer.style.display = "block";
+    });
+  }
 
   // History Directory Filters
   const historySearchInput = document.getElementById("historySearchInput");
@@ -899,21 +923,29 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
-// Render Past Work Orders Directory Table
+// Render Past Work Orders Directory
 function renderHistoryTable() {
+  const cardsContainer = document.getElementById("historyCardsContainer");
   const tbody = document.getElementById("historyTableBody");
-  if (!tbody) return;
-  tbody.innerHTML = "";
+  
+  if (cardsContainer) cardsContainer.innerHTML = "";
+  if (tbody) tbody.innerHTML = "";
 
   const query = (document.getElementById("historySearchInput")?.value || "").toLowerCase().trim();
   const statusFilter = document.getElementById("historyStatusFilter")?.value || "ALL";
   const sortBy = document.getElementById("historySortSelect")?.value || "newest";
+
+  let overallOrders = WORK_ORDERS_DATA.length;
+  let overallMeters = 0;
+  let overallWeight = 0;
+  let overallAmount = 0;
 
   let filtered = WORK_ORDERS_DATA.map((wo, originalIdx) => {
     let totalQty = 0;
     let totalMeters = 0;
     let totalWeight = 0;
     let totalAmount = 0;
+    let profileSet = new Set();
 
     wo.items.forEach(it => {
       const q = Number(it.qty) || 0;
@@ -922,7 +954,13 @@ function renderHistoryTable() {
       totalMeters += Math.round((q * len) / 1000);
       totalWeight += Number(it.weight) || 0;
       totalAmount += q * (Number(it.price) || 0);
+      if (it.profile) profileSet.add(it.profile);
+      else if (it.description) profileSet.add(it.description.split(" X ").slice(0, 3).join(" X "));
     });
+
+    overallMeters += totalMeters;
+    overallWeight += totalWeight;
+    overallAmount += totalAmount;
 
     const signedCount = wo.auditSteps ? wo.auditSteps.filter(s => s.verified).length : 0;
 
@@ -933,9 +971,21 @@ function renderHistoryTable() {
       calcTotalMeters: totalMeters,
       calcTotalWeight: totalWeight,
       calcTotalAmount: totalAmount,
+      profilesList: Array.from(profileSet),
       signedCount
     };
   });
+
+  // Update Summary KPI Strip
+  const histKpiTotalOrders = document.getElementById("histKpiTotalOrders");
+  const histKpiTotalMeters = document.getElementById("histKpiTotalMeters");
+  const histKpiTotalWeight = document.getElementById("histKpiTotalWeight");
+  const histKpiTotalAmount = document.getElementById("histKpiTotalAmount");
+
+  if (histKpiTotalOrders) histKpiTotalOrders.textContent = overallOrders;
+  if (histKpiTotalMeters) histKpiTotalMeters.textContent = formatNum(overallMeters);
+  if (histKpiTotalWeight) histKpiTotalWeight.textContent = formatNum(overallWeight);
+  if (histKpiTotalAmount) histKpiTotalAmount.textContent = "₹" + formatNum(overallAmount);
 
   // Filter
   if (query) {
@@ -963,71 +1013,165 @@ function renderHistoryTable() {
     filtered.sort((a, b) => b.originalIdx - a.originalIdx);
   }
 
-  // Update Count Badge
+  // Update Count Badge in tab header
   const countEl = document.getElementById("historyTabCount");
   if (countEl) countEl.textContent = WORK_ORDERS_DATA.length;
 
   if (filtered.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="13" style="text-align: center; padding: 36px 16px; color: var(--color-ink-500);">
-          <div style="font-size: 14px; font-weight: 700; margin-bottom: 4px;">No matching work orders found</div>
-          <div style="font-size: 11.5px;">Try adjusting your search terms or filters.</div>
-        </td>
-      </tr>
+    const emptyHtml = `
+      <div style="grid-column: 1 / -1; text-align: center; padding: 48px 16px; background: var(--color-white); border-radius: var(--radius-md); border: 1px dashed var(--color-kraft-300);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 36px; height: 36px; color: var(--color-kraft-400); margin-bottom: 8px;">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <div style="font-size: 15px; font-weight: 700; color: var(--color-ink-800); margin-bottom: 4px;">No matching work orders found</div>
+        <div style="font-size: 12px; color: var(--color-ink-500);">Try adjusting your search keywords or status filter.</div>
+      </div>
     `;
+    if (cardsContainer) cardsContainer.innerHTML = emptyHtml;
+    if (tbody) tbody.innerHTML = `<tr><td colspan="13" style="text-align:center; padding: 36px;">No matching records</td></tr>`;
     return;
   }
 
-  filtered.forEach(wo => {
-    let statusClass = "status-confirmed";
-    if (wo.status === "DRAFT") statusClass = "status-draft";
-    if (wo.status.includes("RELEASED")) statusClass = "status-released";
+  // 1. Render Cards Grid
+  if (cardsContainer) {
+    filtered.forEach(wo => {
+      let statusClass = "status-confirmed";
+      if (wo.status === "DRAFT") statusClass = "status-draft";
+      if (wo.status.includes("RELEASED")) statusClass = "status-released";
 
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td class="part-code-cell" style="font-weight: 800; color: var(--color-forest-900);">#${wo.id}</td>
-      <td style="font-size: 11.5px;">${wo.issueDate}</td>
-      <td style="font-size: 11.5px; font-weight: 600; color: #b45309;">${wo.deliveryTarget}</td>
-      <td>
-        <div style="font-weight: 700; color: var(--color-ink-900);">${wo.destination}</div>
-        <div style="font-size: 10.5px; color: var(--color-ink-500);">${wo.destinationSub || "Direct Consignment"}</div>
-      </td>
-      <td style="font-family: var(--font-mono); font-size: 11.5px; font-weight: 700;">${wo.vendorCode}</td>
-      <td class="text-center font-mono">${wo.items.length}</td>
-      <td class="text-right font-mono text-bold">${formatNum(wo.calcTotalQty)}</td>
-      <td class="text-right font-mono text-bold">${formatNum(wo.calcTotalMeters)}</td>
-      <td class="text-right font-mono">${formatNum(wo.calcTotalWeight)} Kgs</td>
-      <td class="text-right font-mono text-bold text-emerald">₹${formatNum(wo.calcTotalAmount)}</td>
-      <td class="text-center">
-        <span class="status-badge ${statusClass}" style="font-size: 9.5px; padding: 2px 7px;">${wo.status}</span>
-      </td>
-      <td class="text-center font-mono" style="font-size: 11px;">
-        <span style="color: ${wo.signedCount === 4 ? '#059669' : '#d97706'}; font-weight: 700;">${wo.signedCount}/4 Signed</span>
-      </td>
-      <td class="text-center">
-        <div class="row-actions-cell">
-          <button class="btn-icon-small" title="Open in Workbench" onclick="openOrderFromHistory(${wo.originalIdx})">
-            <svg viewBox="0 0 20 20" fill="currentColor" style="width: 12px; height: 12px; color: var(--color-forest-700);">
-              <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
-              <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
-            </svg>
-          </button>
-          <button class="btn-icon-small" title="Print Physical Memo" onclick="printOrderFromHistory(${wo.originalIdx})">
-            <svg viewBox="0 0 20 20" fill="currentColor" style="width: 12px; height: 12px;">
-              <path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a2 2 0 002 2h6a2 2 0 002-2v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm8 0H7v3h6V4zm0 8H7v4h6v-4z" clip-rule="evenodd"/>
-            </svg>
-          </button>
-          <button class="btn-icon-small btn-delete" title="Delete Work Order" onclick="deleteOrderFromHistory(${wo.originalIdx})">
-            <svg viewBox="0 0 20 20" fill="currentColor" style="width: 12px; height: 12px;">
-              <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
-            </svg>
-          </button>
+      const profilesHtml = (wo.profilesList || []).map(p => `<span class="history-profile-pill">${p}</span>`).join(" ");
+
+      const card = document.createElement("div");
+      card.className = "history-card-item";
+      card.innerHTML = `
+        <div class="history-card-header">
+          <div class="history-card-id-wrap">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="history-card-id">#${wo.id}</span>
+              <span class="status-badge ${statusClass}" style="font-size: 9.5px; padding: 2px 7px;">${wo.status}</span>
+            </div>
+            <span class="history-card-date">Issued: ${wo.issueDate} // Delivery Target: <strong style="color: #b45309;">${wo.deliveryTarget}</strong></span>
+          </div>
+          <span style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--color-ink-600);">${wo.vendorCode}</span>
         </div>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
+
+        <div>
+          <div class="history-card-dest">${wo.destination}</div>
+          <div class="history-card-dest-sub">${wo.destinationSub || "Direct Consignment"}</div>
+        </div>
+
+        <div class="history-card-profiles">
+          ${profilesHtml || '<span class="history-profile-pill">Standard Edgeboards</span>'}
+        </div>
+
+        <div class="history-card-metrics">
+          <div class="history-m-col">
+            <span class="history-m-lbl">ITEMS</span>
+            <span class="history-m-val">${wo.items.length} Lines</span>
+          </div>
+          <div class="history-m-col">
+            <span class="history-m-lbl">QUANTITY</span>
+            <span class="history-m-val">${formatNum(wo.calcTotalQty)} Nos</span>
+          </div>
+          <div class="history-m-col">
+            <span class="history-m-lbl">RUN MTR</span>
+            <span class="history-m-val">${formatNum(wo.calcTotalMeters)} Mtr</span>
+          </div>
+          <div class="history-m-col">
+            <span class="history-m-lbl">TOTAL (₹)</span>
+            <span class="history-m-val text-emerald">₹${formatNum(wo.calcTotalAmount)}</span>
+          </div>
+        </div>
+
+        <div class="history-card-audit-bar">
+          <div class="history-audit-steps-mini">
+            <span class="audit-mini-chip ${wo.auditSteps && wo.auditSteps[0]?.verified ? 'done' : 'pending'}">DM ${wo.auditSteps && wo.auditSteps[0]?.verified ? '✓' : '…'}</span>
+            <span class="audit-mini-chip ${wo.auditSteps && wo.auditSteps[1]?.verified ? 'done' : 'pending'}">QA ${wo.auditSteps && wo.auditSteps[1]?.verified ? '✓' : '…'}</span>
+            <span class="audit-mini-chip ${wo.auditSteps && wo.auditSteps[2]?.verified ? 'done' : 'pending'}">GM ${wo.auditSteps && wo.auditSteps[2]?.verified ? '✓' : '…'}</span>
+            <span class="audit-mini-chip ${wo.auditSteps && wo.auditSteps[3]?.verified ? 'done' : 'pending'}">WH ${wo.auditSteps && wo.auditSteps[3]?.verified ? '✓' : '…'}</span>
+          </div>
+
+          <div class="history-card-actions">
+            <button class="action-btn action-secondary" style="padding: 5px 10px; font-size: 11px;" onclick="printOrderFromHistory(${wo.originalIdx})" title="Print Internal Memo">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5">
+                <path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/>
+                <path d="M6 14h12v8H6z"/>
+              </svg>
+              <span>Print</span>
+            </button>
+            <button class="action-btn action-primary" style="padding: 5px 12px; font-size: 11px;" onclick="openOrderFromHistory(${wo.originalIdx})" title="Open and edit in Workbench">
+              <svg viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5">
+                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
+              </svg>
+              <span>Open</span>
+            </button>
+            <button class="btn-icon-small btn-delete" title="Delete Work Order" onclick="deleteOrderFromHistory(${wo.originalIdx})">
+              <svg viewBox="0 0 20 20" fill="currentColor" style="width: 12px; height: 12px;">
+                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      `;
+      cardsContainer.appendChild(card);
+    });
+  }
+
+  // 2. Render Tabular View
+  if (tbody) {
+    filtered.forEach(wo => {
+      let statusClass = "status-confirmed";
+      if (wo.status === "DRAFT") statusClass = "status-draft";
+      if (wo.status.includes("RELEASED")) statusClass = "status-released";
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="part-code-cell" style="font-weight: 800; color: var(--color-forest-900);">#${wo.id}</td>
+        <td style="font-size: 11.5px;">${wo.issueDate}</td>
+        <td style="font-size: 11.5px; font-weight: 600; color: #b45309;">${wo.deliveryTarget}</td>
+        <td>
+          <div style="font-weight: 700; color: var(--color-ink-900);">${wo.destination}</div>
+          <div style="font-size: 10.5px; color: var(--color-ink-500);">${wo.destinationSub || "Direct Consignment"}</div>
+        </td>
+        <td style="font-family: var(--font-mono); font-size: 11.5px; font-weight: 700;">${wo.vendorCode}</td>
+        <td class="text-center font-mono">${wo.items.length}</td>
+        <td class="text-right font-mono text-bold">${formatNum(wo.calcTotalQty)}</td>
+        <td class="text-right font-mono text-bold">${formatNum(wo.calcTotalMeters)}</td>
+        <td class="text-right font-mono">${formatNum(wo.calcTotalWeight)} Kgs</td>
+        <td class="text-right font-mono text-bold text-emerald">₹${formatNum(wo.calcTotalAmount)}</td>
+        <td class="text-center">
+          <span class="status-badge ${statusClass}" style="font-size: 9.5px; padding: 2px 7px;">${wo.status}</span>
+        </td>
+        <td class="text-center font-mono" style="font-size: 11px;">
+          <span style="color: ${wo.signedCount === 4 ? '#059669' : '#d97706'}; font-weight: 700;">${wo.signedCount}/4 Signed</span>
+        </td>
+        <td class="text-center">
+          <div class="row-actions-cell">
+            <button class="btn-icon-small" title="Open in Workbench" onclick="openOrderFromHistory(${wo.originalIdx})">
+              <svg viewBox="0 0 20 20" fill="currentColor" style="width: 12px; height: 12px; color: var(--color-forest-700);">
+                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
+              </svg>
+            </button>
+            <button class="btn-icon-small" title="Print Physical Memo" onclick="printOrderFromHistory(${wo.originalIdx})">
+              <svg viewBox="0 0 20 20" fill="currentColor" style="width: 12px; height: 12px;">
+                <path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a2 2 0 002 2h6a2 2 0 002-2v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm8 0H7v3h6V4zm0 8H7v4h6v-4z" clip-rule="evenodd"/>
+              </svg>
+            </button>
+            <button class="btn-icon-small btn-delete" title="Delete Work Order" onclick="deleteOrderFromHistory(${wo.originalIdx})">
+              <svg viewBox="0 0 20 20" fill="currentColor" style="width: 12px; height: 12px;">
+                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+              </svg>
+            </button>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
 }
 
 // Global helper: Open order from history table

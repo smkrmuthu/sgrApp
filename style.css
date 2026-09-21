@@ -2099,14 +2099,28 @@ button, input, select, textarea {
 }
 
 /* ==========================================================================
-   PAST WORK ORDERS DIRECTORY CARD
+   PAST WORK ORDERS DIRECTORY & CARDS
    ========================================================================== */
+.history-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+@media (max-width: 960px) {
+  .history-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 .history-directory-card {
   background: var(--color-white);
   border: 1px solid var(--color-kraft-200);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .directory-top-bar {
@@ -2131,6 +2145,42 @@ button, input, select, textarea {
   font-size: 11.5px;
   color: var(--color-ink-500);
   margin-top: 2px;
+}
+
+.directory-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* View Mode Toggle */
+.view-toggle-wrap {
+  display: flex;
+  background: var(--color-kraft-100);
+  border: 1px solid var(--color-kraft-300);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+}
+
+.toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border: none;
+  background: transparent;
+  color: var(--color-ink-700);
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all 0.15s ease;
+}
+
+.toggle-btn.active {
+  background: var(--color-forest-900);
+  color: var(--color-white);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
 }
 
 .history-filter-toolbar {
@@ -2173,6 +2223,167 @@ button, input, select, textarea {
 }
 
 .filter-dropdowns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* History Cards Grid */
+.history-cards-grid {
+  padding: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(440px, 1fr));
+  gap: 16px;
+  background: #fbf9f4;
+}
+
+@media (max-width: 768px) {
+  .history-cards-grid {
+    grid-template-columns: 1fr;
+    padding: 12px;
+  }
+}
+
+.history-card-item {
+  background: var(--color-white);
+  border: 1px solid var(--color-kraft-300);
+  border-radius: var(--radius-md);
+  padding: 18px;
+  box-shadow: 0 1px 3px rgba(26, 53, 42, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  position: relative;
+}
+
+.history-card-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(26, 53, 42, 0.08);
+  border-color: var(--color-forest-400);
+}
+
+.history-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.history-card-id-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.history-card-id {
+  font-size: 16px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--color-forest-900);
+}
+
+.history-card-date {
+  font-size: 11px;
+  color: var(--color-ink-500);
+}
+
+.history-card-dest {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-ink-900);
+}
+
+.history-card-dest-sub {
+  font-size: 11px;
+  color: var(--color-ink-500);
+}
+
+.history-card-profiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.history-profile-pill {
+  background: #f4efe4;
+  border: 1px solid var(--color-kraft-300);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--color-forest-900);
+}
+
+.history-card-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  background: #fdfbf7;
+  border: 1px solid var(--color-kraft-200);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+
+.history-m-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.history-m-lbl {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--color-ink-500);
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.history-m-val {
+  font-size: 12.5px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--color-ink-900);
+}
+
+.history-card-audit-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-kraft-200);
+}
+
+.history-audit-steps-mini {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.audit-mini-chip {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+}
+
+.audit-mini-chip.done {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.audit-mini-chip.pending {
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.history-card-actions {
   display: flex;
   align-items: center;
   gap: 8px;
