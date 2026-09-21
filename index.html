@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=9" />
+  <link rel="stylesheet" href="style.css?v=10" />
 </head>
 <body>
   <!-- TOP APP BAR -->
@@ -442,9 +442,7 @@
               <td class="text-right">--</td>
               <td class="text-right text-bold font-mono text-emerald" id="footerGrandAmount">₹152,500</td>
               <td colspan="2" class="text-forest text-bold" style="letter-spacing: 0.5px;">100% FLOOR ASSIGNED</td>
-              <td class="text-center">
-                <button type="button" class="btn-tfoot-bill" onclick="openTaxInvoiceModal()" title="Generate Tax Invoice / Bill">🧾 Bill</button>
-              </td>
+              <td class="text-center">--</td>
             </tr>
           </tfoot>
         </table>
@@ -478,23 +476,12 @@
             <input type="text" id="addRemarks" placeholder="Remarks" class="form-input" style="flex: 1.2; min-width: 120px;" />
             <input type="text" id="addCustRef" placeholder="Cust Ref" class="form-input" style="width: 100px;" />
             
-            <div class="quick-add-actions-group">
-              <button type="submit" class="btn-add-item" id="btnAddItem">
-                <svg viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
-                  <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
-                </svg>
-                ADD ITEM
-              </button>
-              <button type="button" class="btn-corner-bill" id="btnCornerBill" title="Generate GST Tax Invoice & Commercial Bill for this Work Order">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                  <polyline points="14 2 14 8 20 8"></polyline>
-                  <line x1="16" y1="13" x2="8" y2="13"></line>
-                  <line x1="16" y1="17" x2="8" y2="17"></line>
-                </svg>
-                <span>🧾 Generate Bill</span>
-              </button>
-            </div>
+            <button type="submit" class="btn-add-item" id="btnAddItem">
+              <svg viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+                <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
+              </svg>
+              ADD ITEM
+            </button>
           </div>
         </form>
       </div>
@@ -1534,7 +1521,7 @@
   <script src="storage.js?v=2"></script>
   <script src="db.js?v=4"></script>
   <script src="users.js?v=3"></script>
-  <script src="app.js?v=11"></script>
+  <script src="app.js?v=12"></script>
 
   <!-- INLINE TAB SWITCHING — Guaranteed to work independent of app.js load state -->
   <script>
