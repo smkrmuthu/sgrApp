@@ -28,6 +28,23 @@ const UsersAdmin = (() => {
     set("userRoleText", `ROLE: ${(ROLE_LABELS[profile.role] || profile.role || "Staff").toUpperCase()}`);
     const badge = $("userBadge");
     if (badge && profile.email) badge.title = profile.email;
+
+    // Synchronize header role view switcher
+    const roleSelect = $("roleViewSelect");
+    if (roleSelect && profile.role) {
+      const roleMap = {
+        prod: "planner",
+        planner: "planner",
+        md: "gm",
+        gm: "gm",
+        qa: "qa",
+        staff: "dispatch",
+        dispatch: "dispatch"
+      };
+      if (roleMap[profile.role]) {
+        roleSelect.value = roleMap[profile.role];
+      }
+    }
   }
 
   function setProfile(profile) {

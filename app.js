@@ -164,6 +164,51 @@ function requireOpenOrder() {
   return false;
 }
 
+// Universal null-safe order search helper
+function matchesOrder(wo, query) {
+  if (!wo || !query) return false;
+  const q = String(query).toLowerCase().trim();
+  if (!q) return false;
+
+  const matchStr = (val) => val != null && String(val).toLowerCase().includes(q);
+
+  if (
+    matchStr(wo.id) ||
+    matchStr(wo.docRef) ||
+    matchStr(wo.vendorCode) ||
+    matchStr(wo.vendorSub) ||
+    matchStr(wo.destination) ||
+    matchStr(wo.destinationSub) ||
+    matchStr(wo.buyer) ||
+    matchStr(wo.customer) ||
+    matchStr(wo.status) ||
+    matchStr(wo.remarks) ||
+    matchStr(wo.issueDate) ||
+    matchStr(wo.deliveryTarget)
+  ) {
+    return true;
+  }
+
+  if (Array.isArray(wo.items)) {
+    for (const it of wo.items) {
+      if (!it) continue;
+      if (
+        matchStr(it.partNo) ||
+        matchStr(it.description) ||
+        matchStr(it.subDesc) ||
+        matchStr(it.profile) ||
+        matchStr(it.custRef) ||
+        matchStr(it.category) ||
+        matchStr(it.remarks)
+      ) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 // Single funnel for saving: call after every change to WORK_ORDERS_DATA, passing the order that changed
 // (it is saved on this device at once and queued for the shared database).
 let storageWarned = false;
@@ -854,28 +899,52 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Global Search
   const searchInput = document.getElementById("globalSearchInput");
-  window.addEventListener("keydown", (e) => {
-    if (e.key === "/" && document.activeElement !== searchInput) {
-      e.preventDefault();
-      searchInput.focus();
-    }
-  });
+  if (searchInput) {
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "/" && document.activeElement !== searchInput) {
+        e.preventDefault();
+        searchInput.focus();
+      }
+    });
 
-  searchInput.addEventListener("input", (e) => {
-    const q = e.target.value.toLowerCase().trim();
-    if (!q) return;
-    const matchIndex = WORK_ORDERS_DATA.findIndex(wo => 
-      wo.id.toLowerCase().includes(q) || 
-      wo.destination.toLowerCase().includes(q) ||
-      wo.vendorCode.toLowerCase().includes(q) ||
-      wo.items.some(it => it.partNo.toLowerCase().includes(q) || it.description.toLowerCase().includes(q))
-    );
-    if (matchIndex !== -1 && matchIndex !== currentOrderIndex) {
-      currentOrderIndex = matchIndex;
-      renderWorkOrder();
-      showToast(`Jumped to matching Work Order #${WORK_ORDERS_DATA[matchIndex].id}`);
-    }
-  });
+    const performGlobalSearch = (trigger) => {
+      const q = searchInput.value.toLowerCase().trim();
+      if (!q) return;
+
+      const historyView = document.getElementById("historyView");
+      const isHistoryVisible = historyView && historyView.style.display !== "none";
+
+      // If user is currently looking at the Past Work Orders tab, sync search to that table
+      if (isHistoryVisible) {
+        const histInput = document.getElementById("historySearchInput");
+        if (histInput) {
+          histInput.value = searchInput.value;
+          renderHistoryTable();
+        }
+        return;
+      }
+
+      const matchIndex = WORK_ORDERS_DATA.findIndex(wo => matchesOrder(wo, q));
+      if (matchIndex !== -1) {
+        if (typeof switchMainView === "function") switchMainView("workbench");
+        currentOrderIndex = matchIndex;
+        renderWorkOrder();
+        if (trigger === "enter") {
+          showToast(`Jumped to Work Order #${WORK_ORDERS_DATA[matchIndex].id}`);
+        }
+      } else if (trigger === "enter") {
+        showToast(`No matching work order found for "${searchInput.value.trim()}"`, "error");
+      }
+    };
+
+    searchInput.addEventListener("input", () => performGlobalSearch("input"));
+    searchInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        performGlobalSearch("enter");
+      }
+    });
+  }
 
   // Role Switcher
   document.getElementById("roleViewSelect").addEventListener("change", (e) => {
@@ -1042,12 +1111,7 @@ function renderHistoryTable() {
 
   // Filter
   if (query) {
-    filtered = filtered.filter(wo => 
-      wo.id.toLowerCase().includes(query) ||
-      wo.destination.toLowerCase().includes(query) ||
-      wo.vendorCode.toLowerCase().includes(query) ||
-      wo.items.some(it => it.partNo.toLowerCase().includes(query) || it.description.toLowerCase().includes(query) || (it.custRef && it.custRef.toLowerCase().includes(query)))
-    );
+    filtered = filtered.filter(wo => matchesOrder(wo, query));
   }
 
   if (statusFilter !== "ALL") {

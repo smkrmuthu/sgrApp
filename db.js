@@ -287,8 +287,24 @@ const Cloud = (() => {
   // Who am I (role)? Used to show the Users tab to an MD. The server re-checks the role on every request.
   async function loadProfile() {
     profile = null;
-    const { data } = await client.from("profiles").select("role, full_name, email").eq("id", session.user.id).maybeSingle();
-    profile = data || null;
+    try {
+      const { data } = await client.from("profiles").select("role, full_name, email").eq("id", session.user.id).maybeSingle();
+      profile = data || null;
+    } catch (e) {
+      console.warn("Could not fetch profile record:", e);
+    }
+    if (!profile && session && session.user) {
+      const email = (session.user.email || "").toLowerCase();
+      let defaultRole = "staff";
+      if (email.includes("md") || email.includes("gm") || email.includes("admin")) defaultRole = "md";
+      else if (email.includes("prod") || email.includes("plan")) defaultRole = "prod";
+      else if (email.includes("qa") || email.includes("qc")) defaultRole = "qa";
+      profile = {
+        role: (session.user.user_metadata && session.user.user_metadata.role) || defaultRole,
+        full_name: (session.user.user_metadata && session.user.user_metadata.full_name) || email.split("@")[0],
+        email: session.user.email
+      };
+    }
     if (env.onProfile) env.onProfile(profile);
   }
 
