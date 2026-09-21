@@ -1,10 +1,9 @@
 /**
  * SGR MOULDS INDIA PVT LTD — WORK ORDER STORAGE
  *
- * app.js talks to persistence only through OrderStore.load() / OrderStore.save().
- * Today that is browser localStorage. To add a database later, replace the two
- * localStorage calls below (readRaw / writeRaw) with the DB client; the schema
- * handling and everything in app.js stays as it is.
+ * This is the on-device copy of the work orders (browser localStorage): instant loading,
+ * works offline. The shared copy lives in Supabase and is synced by db.js, which reads and
+ * writes through this store. Schema rules below apply to both copies.
  *
  * CHANGING FIELDS (read this before editing the order / item shape)
  *   Add a field     -> add it to the matching *_DEFAULTS below. Records saved earlier
@@ -19,9 +18,27 @@ const OrderStore = (() => {
   // GitHub Pages serves every smkrmuthu.github.io/* project from ONE origin, so the
   // key is namespaced to keep this app apart from other apps' localStorage entries.
   const STORAGE_KEY = "sgrApp:workOrders";
-  const SCHEMA_VERSION = 1;
+  const SCHEMA_VERSION = 2;
+
+  // Random id for a new order. Falls back when crypto.randomUUID is unavailable (non-secure context).
+  function newUid() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    const b = crypto.getRandomValues(new Uint8Array(16));
+    b[6] = (b[6] & 0x0f) | 0x40; b[8] = (b[8] & 0x3f) | 0x80;
+    const h = Array.from(b, x => x.toString(16).padStart(2, "0")).join("");
+    return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+  }
+
+  // The 3 sample orders get fixed ids so every browser (and the database) agrees they are the same orders.
+  const SEED_UIDS = {
+    "343/2026-27": "5eed0000-0000-4000-8000-000000000343",
+    "344/2026-27": "5eed0000-0000-4000-8000-000000000344",
+    "345/2026-27": "5eed0000-0000-4000-8000-000000000345"
+  };
 
   const ORDER_DEFAULTS = () => ({
+    uid: newUid(),          // stable identity; the database key. Never edit.
+    updatedAt: null,        // last server save we know of (used to detect edit conflicts)
     id: "",
     docRef: "",
     vendorCode: "",
@@ -64,9 +81,12 @@ const OrderStore = (() => {
   });
 
   // MIGRATIONS[n] upgrades the orders array from schema n to schema n + 1.
-  // Example for the day a field is renamed (then set SCHEMA_VERSION = 2):
-  //   1: (orders) => orders.map(o => { o.vendor = o.vendorCode; delete o.vendorCode; return o; }),
-  const MIGRATIONS = {};
+  // Example for the day a field is renamed (then bump SCHEMA_VERSION):
+  //   2: (orders) => orders.map(o => { o.vendor = o.vendorCode; delete o.vendorCode; return o; }),
+  const MIGRATIONS = {
+    // v1 -> v2: orders get a permanent uid (needed to sync with the database)
+    1: (orders) => orders.map(o => ({ ...o, uid: o.uid || SEED_UIDS[o.id] || newUid(), updatedAt: o.updatedAt || null }))
+  };
 
   // Fills any missing (undefined / null) field from the defaults; keeps everything else.
   function fill(record, defaults) {
@@ -110,7 +130,7 @@ const OrderStore = (() => {
   // Returns the saved orders; on first run (nothing saved yet) returns a copy of `seedOrders`.
   function load(seedOrders) {
     const firstRun = () => {
-      const seeded = seedOrders.map(o => normalizeOrder(JSON.parse(JSON.stringify(o))));
+      const seeded = seedOrders.map(o => normalizeOrder({ uid: SEED_UIDS[o.id], ...JSON.parse(JSON.stringify(o)) }));
       save(seeded);
       return seeded;
     };
@@ -152,5 +172,5 @@ const OrderStore = (() => {
     try { localStorage.removeItem(STORAGE_KEY); } catch (e) { /* ignore */ }
   }
 
-  return { load, save, reset, SCHEMA_VERSION };
+  return { load, save, reset, normalizeOrder, newUid, SCHEMA_VERSION };
 })();

@@ -149,19 +149,22 @@ const SEED_WORK_ORDERS = [
   }
 ];
 
-// Live Work Orders, loaded from browser storage (falls back to the sample data on first run)
-const WORK_ORDERS_DATA = OrderStore.load(SEED_WORK_ORDERS);
+// Live Work Orders, loaded from this device's saved copy. The sample data is only for local-only mode:
+// with Supabase configured, the shared database is the source of truth and there are no samples.
+const WORK_ORDERS_DATA = OrderStore.load(Cloud.configured ? [] : SEED_WORK_ORDERS);
 
 // Current Active Work Order Pointer
 let currentOrderIndex = 0;
 
-// Single funnel for saving: call after every change to WORK_ORDERS_DATA
+// Single funnel for saving: call after every change to WORK_ORDERS_DATA, passing the order that changed
+// (it is saved on this device at once and queued for the shared database).
 let storageWarned = false;
-function persistOrders() {
-  if (OrderStore.save(WORK_ORDERS_DATA)) return;
-  if (storageWarned) return;
-  storageWarned = true;
-  showToast("Could not save changes in this browser (storage full or blocked). Changes will be lost on refresh.", "error");
+function persistOrders(changedOrder) {
+  if (!OrderStore.save(WORK_ORDERS_DATA) && !storageWarned) {
+    storageWarned = true;
+    showToast("Could not save changes in this browser (storage full or blocked). Changes will be lost on refresh.", "error");
+  }
+  Cloud.queueSave(changedOrder);
 }
 
 // Next work order number = highest existing "NNN/" prefix + 1 (safe after deletions)
@@ -203,9 +206,19 @@ function showToast(message, type = "success") {
 }
 
 // Render Current Work Order
+function updateOrderCounts() {
+  const ordersCountEl = document.getElementById("totalOrdersCount");
+  if (ordersCountEl) ordersCountEl.textContent = WORK_ORDERS_DATA.length;
+
+  const menuOrdersCountEl = document.getElementById("menuOrdersCount");
+  if (menuOrdersCountEl) menuOrdersCountEl.textContent = `${WORK_ORDERS_DATA.length} Active`;
+}
+
 function renderWorkOrder() {
   const order = WORK_ORDERS_DATA[currentOrderIndex];
-  if (!order) return;
+  const view = document.getElementById("workbenchView");
+  if (view) view.classList.toggle("is-empty", !order);   // no orders: show the empty-state card instead of stale markup
+  if (!order) { updateOrderCounts(); return; }
 
   // Header and Meta
   const displayWoEl = document.getElementById("displayWoNumber");
@@ -347,11 +360,7 @@ function renderWorkOrder() {
   renderAuditChain();
 
   // Update Orders drawer & menu count
-  const ordersCountEl = document.getElementById("totalOrdersCount");
-  if (ordersCountEl) ordersCountEl.textContent = WORK_ORDERS_DATA.length;
-
-  const menuOrdersCountEl = document.getElementById("menuOrdersCount");
-  if (menuOrdersCountEl) menuOrdersCountEl.textContent = `${WORK_ORDERS_DATA.length} Active`;
+  updateOrderCounts();
 }
 
 // Render Audit Chain
@@ -432,7 +441,7 @@ document.getElementById("quickAddForm").addEventListener("submit", function(e) {
   };
 
   order.items.push(newItem);
-  persistOrders();
+  persistOrders(order);
   renderWorkOrder();
   showToast(`Item ${partNo} added to Work Order #${order.id}!`);
 
@@ -448,7 +457,7 @@ window.deleteItem = function(index) {
   const order = WORK_ORDERS_DATA[currentOrderIndex];
   if (confirm(`Remove item ${order.items[index].partNo}?`)) {
     const deleted = order.items.splice(index, 1);
-    persistOrders();
+    persistOrders(order);
     renderWorkOrder();
     showToast(`Removed ${deleted[0].partNo}`);
   }
@@ -462,7 +471,7 @@ window.duplicateItem = function(index) {
   cloned.id = `item-${Date.now()}`;
   cloned.partNo += "-COPY";
   order.items.push(cloned);
-  persistOrders();
+  persistOrders(order);
   renderWorkOrder();
   showToast(`Cloned line item as ${cloned.partNo}`);
 };
@@ -682,6 +691,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const status = document.getElementById("newStatus").value;
 
     const newOrder = {
+      uid: OrderStore.newUid(),
+      updatedAt: null,
       id: woNum,
       docRef: docRef,
       vendorCode: vendorCode,
@@ -721,7 +732,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     WORK_ORDERS_DATA.push(newOrder);
     currentOrderIndex = WORK_ORDERS_DATA.length - 1;
-    persistOrders();
+    persistOrders(newOrder);
     renderWorkOrder();
     newWoModal.classList.remove("open");
     showToast(`Work Order #${woNum} created successfully!`);
@@ -756,7 +767,7 @@ document.addEventListener("DOMContentLoaded", () => {
     item.profile = extractProfileFromDesc(item.description);
     item.subDesc = `Length: ${item.lengthMm} mm // UOM: ${item.uom}`;
 
-    persistOrders();
+    persistOrders(order);
     renderWorkOrder();
     editItemModal.classList.remove("open");
     showToast(`Updated item ${item.partNo} successfully!`);
@@ -798,7 +809,7 @@ document.addEventListener("DOMContentLoaded", () => {
     order.qualityGate = document.getElementById("editQualityGate").value;
     order.status = document.getElementById("editStatus").value;
 
-    persistOrders();
+    persistOrders(order);
     renderWorkOrder();
     editHeaderModal.classList.remove("open");
     showToast(`Work Order #${order.id} updated!`);
@@ -817,7 +828,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("releaseFloorBtn").addEventListener("click", () => {
     const order = WORK_ORDERS_DATA[currentOrderIndex];
     order.status = "RELEASED — IN PRODUCTION";
-    persistOrders();
+    persistOrders(order);
     showToast(`Work Order #${order.id} released to Production & Finishing Line 02!`);
     renderWorkOrder();
   });
@@ -943,7 +954,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const now = new Date();
     step.time = `${now.toLocaleDateString("en-GB")} ${now.toLocaleTimeString("en-GB", { hour: '2-digit', minute: '2-digit' })}`;
 
-    persistOrders();
+    persistOrders(order);
     renderAuditChain();
     signModal.classList.remove("open");
     showToast(`Digitally signed and sealed by ${step.person}!`);
@@ -1224,7 +1235,24 @@ window.deleteOrderFromHistory = function(idx) {
       currentOrderIndex = Math.max(0, WORK_ORDERS_DATA.length - 1);
     }
     persistOrders();
+    Cloud.queueDelete(wo.uid);
     renderHistoryTable();
     showToast(`Deleted Work Order #${wo.id}`);
   }
 };
+
+// Shared database: sign-in, sync and pulling other people's changes (no-op until Supabase is configured)
+document.addEventListener("DOMContentLoaded", () => {
+  Cloud.start({
+    orders: WORK_ORDERS_DATA,
+    getActiveUid: () => (WORK_ORDERS_DATA[currentOrderIndex] || {}).uid,
+    saveLocal: () => OrderStore.save(WORK_ORDERS_DATA),
+    onChange: (activeUid) => {
+      const idx = WORK_ORDERS_DATA.findIndex(o => o.uid === activeUid);
+      currentOrderIndex = idx >= 0 ? idx : Math.min(currentOrderIndex, Math.max(0, WORK_ORDERS_DATA.length - 1));
+      renderWorkOrder();
+      renderHistoryTable();
+    },
+    toast: showToast
+  });
+});

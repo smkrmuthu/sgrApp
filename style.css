@@ -2497,3 +2497,42 @@ button, input, select, textarea {
     display: none !important;
   }
 }
+
+/* ---------------------------------------------------------------- shared database: sign-in + status */
+/* Until signed in, hide the whole app except the sign-in card. */
+html.auth-locked body > *:not(#loginGate):not(script):not(style):not(link) {
+  display: none !important;
+}
+
+.login-error {
+  min-height: 18px;
+  margin: 0;
+  color: #b91c1c;
+  font-size: 13px;
+}
+
+.menu-sync-status {
+  padding: 6px 14px 8px;
+  font-size: 11px;
+  color: #6b7280;
+  word-break: break-all;
+}
+
+/* Empty state: no work orders at all */
+.empty-state-card {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 64px 16px;
+  text-align: center;
+  background: var(--color-white, #fff);
+  border-radius: var(--radius-lg, 12px);
+}
+
+.empty-state-card h2 { margin: 0; }
+.empty-state-card p { margin: 0 0 12px; color: #6b7280; }
+
+#workbenchView.is-empty > .empty-state-card { display: flex; }
+#workbenchView.is-empty > section:not(.empty-state-card),
+#workbenchView.is-empty > .bottom-dual-grid { display: none; }
