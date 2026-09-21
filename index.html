@@ -134,15 +134,25 @@
     </div>
   </header>
 
-  <!-- NAVIGATION TABS -->
+  <!-- SIMPLIFIED VIEW SWITCHER -->
   <nav class="sub-nav">
     <div class="nav-tabs">
-      <button class="nav-tab active" data-tab="work-orders">WORK ORDERS</button>
-      <button class="nav-tab" data-tab="internal-memos">INTERNAL MEMOS</button>
-      <button class="nav-tab" data-tab="dispatch">DISPATCH & LOGISTICS</button>
-      <button class="nav-tab" data-tab="packing">PACKING & PALLETS</button>
-      <button class="nav-tab" data-tab="inventory">INVENTORY & RAW MATERIALS</button>
-      <button class="nav-tab" data-tab="quality">QUALITY & TEST CERTS</button>
+      <button class="nav-tab active" id="tabWorkbench" data-view="workbench">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+        </svg>
+        <span>WORK ORDER WORKBENCH</span>
+      </button>
+      <button class="nav-tab" id="tabHistory" data-view="history">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+        <span>PAST WORK ORDERS (<span id="historyTabCount">3</span>)</span>
+      </button>
     </div>
     <div class="nav-extra-status">
       <span class="plant-status-dot"></span>
@@ -152,6 +162,9 @@
 
   <!-- MAIN WORK ORDER CONTAINER -->
   <main class="workbench-container" id="mainContainer">
+
+    <!-- VIEW 1: ACTIVE WORKBENCH -->
+    <div id="workbenchView" class="view-panel active">
 
     <!-- WORK ORDER HEADER & ACTIONS RIBBON -->
     <section class="wo-header-card">
@@ -608,7 +621,79 @@
         </div>
       </section>
 
-    </div>
+    </div> <!-- END VIEW 1: ACTIVE WORKBENCH -->
+
+    <!-- VIEW 2: SEARCHABLE PAST WORK ORDERS DIRECTORY -->
+    <div id="historyView" class="view-panel">
+      <section class="history-directory-card">
+        <div class="directory-top-bar">
+          <div class="directory-title-wrap">
+            <h2 class="directory-title">PAST WORK ORDERS DIRECTORY</h2>
+            <p class="directory-subtitle">Search, filter, review, and print all manufacturing work orders</p>
+          </div>
+          <div class="directory-actions">
+            <button class="action-btn action-primary" id="btnHistoryNewOrder">
+              <svg viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+                <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
+              </svg>
+              <span>Create New Order</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- SEARCH & FILTER TOOLBAR -->
+        <div class="history-filter-toolbar">
+          <div class="filter-search-wrap">
+            <svg class="search-icon" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+            </svg>
+            <input type="text" id="historySearchInput" placeholder="Filter by Work Order #, Customer, Destination, Vendor Code, or Part #..." />
+          </div>
+
+          <div class="filter-dropdowns">
+            <select id="historyStatusFilter" class="form-select">
+              <option value="ALL">All Statuses</option>
+              <option value="CONFIRMED — READY FOR FLOOR">Confirmed / Floor Ready</option>
+              <option value="RELEASED — IN PRODUCTION">Released / In Production</option>
+              <option value="DRAFT">Drafts</option>
+            </select>
+
+            <select id="historySortSelect" class="form-select">
+              <option value="newest">Sort: Newest First</option>
+              <option value="oldest">Sort: Oldest First</option>
+              <option value="highest">Sort: Highest Total (₹)</option>
+              <option value="qty">Sort: Highest Quantity</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- PAST ORDERS TABLE -->
+        <div class="table-container">
+          <table class="schedule-table history-table" id="historyTable">
+            <thead>
+              <tr>
+                <th style="width: 120px;">WORK ORDER #</th>
+                <th style="width: 100px;">DATE</th>
+                <th style="width: 110px;">DELIVERY</th>
+                <th>CUSTOMER & DESTINATION</th>
+                <th style="width: 100px;">VENDOR</th>
+                <th style="width: 90px;" class="text-center">ITEMS</th>
+                <th style="width: 100px;" class="text-right">TOTAL QTY</th>
+                <th style="width: 100px;" class="text-right">RUN MTR</th>
+                <th style="width: 110px;" class="text-right">WEIGHT</th>
+                <th style="width: 120px;" class="text-right">AMOUNT (₹)</th>
+                <th style="width: 160px;" class="text-center">STATUS</th>
+                <th style="width: 110px;" class="text-center">SIGN-OFF</th>
+                <th style="width: 140px;" class="text-center">ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody id="historyTableBody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div> <!-- END VIEW 2: PAST WORK ORDERS -->
 
     <!-- BOTTOM MACHINE & SHOPFLOOR TELEMETRY STATUS BAR -->
     <footer class="shopfloor-telemetry-bar">
@@ -633,6 +718,57 @@
     </footer>
 
   </main>
+
+  <!-- DIGITAL SIGN-OFF MODAL -->
+  <div class="modal-backdrop" id="signModal">
+    <div class="modal-dialog" style="width: 480px;">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="8.5" cy="7" r="4"></circle>
+              <polyline points="17 11 19 13 23 9"></polyline>
+            </svg>
+          </div>
+          <div>
+            <h3 id="signModalTitle">Authorize & Sign Work Order</h3>
+            <p id="signModalSubtitle">ISO Compliance Digital Authentication</p>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="closeSignModal">&times;</button>
+      </div>
+
+      <form id="signModalForm" class="modal-form">
+        <input type="hidden" id="signStepId" />
+        <div class="form-group">
+          <label>Signer Role</label>
+          <input type="text" id="signRoleName" class="form-control" readonly style="background: #f5f5f5;" />
+        </div>
+
+        <div class="form-group">
+          <label>Signer Full Name & Designation</label>
+          <input type="text" id="signPersonName" class="form-control" required />
+        </div>
+
+        <div class="form-group">
+          <label>Digital Verification Stamp</label>
+          <div class="signature-stamp-box">
+            <div class="stamp-preview" id="signStampPreview">
+              <span class="stamp-text">APPROVED & DIGITALLY VERIFIED</span>
+              <span class="stamp-unit">SGR MOULDS INDIA // SIPCOT</span>
+              <span class="stamp-date" id="stampDatePreview">16/09/2026 11:30</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-cancel" id="cancelSignModal">Cancel</button>
+          <button type="submit" class="btn-create">Apply Digital Seal & Sign</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <!-- WORK ORDERS DRAWER (SIDE MODAL) -->
   <div class="drawer-backdrop" id="ordersDrawer">

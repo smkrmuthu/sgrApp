@@ -2080,6 +2080,157 @@ button, input, select, textarea {
 }
 
 /* ==========================================================================
+   VIEW SWITCHER PANELS
+   ========================================================================== */
+.view-panel {
+  display: none;
+  flex-direction: column;
+  gap: 16px;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.view-panel.active {
+  display: flex;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ==========================================================================
+   PAST WORK ORDERS DIRECTORY CARD
+   ========================================================================== */
+.history-directory-card {
+  background: var(--color-white);
+  border: 1px solid var(--color-kraft-200);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.directory-top-bar {
+  padding: 16px 20px;
+  background: #fdfbf7;
+  border-bottom: 1px solid var(--color-kraft-200);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.directory-title {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: var(--color-forest-900);
+}
+
+.directory-subtitle {
+  font-size: 11.5px;
+  color: var(--color-ink-500);
+  margin-top: 2px;
+}
+
+.history-filter-toolbar {
+  padding: 12px 20px;
+  background: #faf6ee;
+  border-bottom: 1px solid var(--color-kraft-200);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.filter-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid var(--color-kraft-300);
+  border-radius: var(--radius-md);
+  padding: 6px 12px;
+  flex: 1;
+  max-width: 520px;
+}
+
+.filter-search-wrap .search-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--color-ink-500);
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.filter-search-wrap input {
+  width: 100%;
+  border: none;
+  outline: none;
+  font-size: 12.5px;
+  color: var(--color-ink-900);
+}
+
+.filter-dropdowns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.history-table th {
+  padding: 11px 12px;
+}
+
+.history-table td {
+  padding: 12px;
+}
+
+/* Digital Signature Stamp Box */
+.signature-stamp-box {
+  background: #fafafa;
+  border: 1.5px dashed var(--color-forest-300);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stamp-preview {
+  border: 2px solid var(--color-emerald-600);
+  border-radius: var(--radius-sm);
+  padding: 8px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-emerald-600);
+  font-family: var(--font-mono);
+  transform: rotate(-1.5deg);
+  background: #ecfdf5;
+}
+
+.stamp-text {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+}
+
+.stamp-unit {
+  font-size: 9.5px;
+  font-weight: 700;
+  margin-top: 2px;
+  opacity: 0.85;
+}
+
+.stamp-date {
+  font-size: 9px;
+  margin-top: 3px;
+  color: #065f46;
+}
+
+/* ==========================================================================
    TOAST NOTIFICATIONS
    ========================================================================== */
 .toast-container {

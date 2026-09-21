@@ -341,39 +341,43 @@ function renderAuditChain() {
   if (!order || !order.auditSteps) return;
 
   order.auditSteps.forEach((step) => {
-    const stepEl = document.getElementById(`auditStep${step.id}`);
     const statusTextEl = document.getElementById(`step${step.id}StatusText`);
     const btnEl = document.getElementById(`step${step.id}Btn`);
     const timeEl = document.getElementById(`step${step.id}Time`);
+    const nameEl = document.getElementById(`step${step.id}Name`);
 
+    if (nameEl) nameEl.textContent = step.person;
     if (statusTextEl) statusTextEl.textContent = step.status;
     if (timeEl) timeEl.textContent = step.time;
 
     if (btnEl) {
       btnEl.className = "status-chip " + (step.verified ? "chip-approved" : "chip-pending");
+      btnEl.onclick = () => openSignModal(step.id);
     }
   });
 }
 
-// Toggle Audit Step Approval
-window.toggleAuditStep = function(stepId) {
+// Open Digital Sign-off Modal
+window.openSignModal = function(stepId) {
   const order = WORK_ORDERS_DATA[currentOrderIndex];
   const step = order.auditSteps.find(s => s.id === stepId);
   if (!step) return;
 
-  step.verified = !step.verified;
-  if (step.verified) {
-    step.status = stepId === 3 ? "Released" : stepId === 4 ? "Loaded & Dispatched" : "Approved";
-    const now = new Date();
-    step.time = `${now.toLocaleDateString("en-GB")} ${now.toLocaleTimeString("en-GB", { hour: '2-digit', minute: '2-digit' })}`;
-    showToast(`${step.role} marked as ${step.status}!`);
-  } else {
-    step.status = "Pending";
-    step.time = "Pending action";
-    showToast(`${step.role} signature reset to Pending.`);
-  }
+  document.getElementById("signStepId").value = stepId;
+  document.getElementById("signRoleName").value = step.role;
+  document.getElementById("signPersonName").value = step.person;
+  document.getElementById("signModalTitle").textContent = `Authorize & Sign — ${step.role}`;
 
-  renderAuditChain();
+  const now = new Date();
+  const dateStr = `${now.toLocaleDateString("en-GB")} ${now.toLocaleTimeString("en-GB", { hour: '2-digit', minute: '2-digit' })}`;
+  document.getElementById("stampDatePreview").textContent = dateStr;
+
+  document.getElementById("signModal").classList.add("open");
+};
+
+// Toggle Audit Step (Quick)
+window.toggleAuditStep = function(stepId) {
+  openSignModal(stepId);
 };
 
 // Add Line Item
@@ -826,12 +830,229 @@ document.addEventListener("DOMContentLoaded", () => {
     showToast(`View switched to ${e.target.options[e.target.selectedIndex].text}`);
   });
 
-  // Sub Navigation Tabs
-  document.querySelectorAll(".nav-tab").forEach(tab => {
-    tab.addEventListener("click", () => {
-      document.querySelectorAll(".nav-tab").forEach(t => t.classList.remove("active"));
-      tab.classList.add("active");
-      showToast(`Switched view to: ${tab.textContent}`);
+  // View Tab Switching
+  const tabWorkbench = document.getElementById("tabWorkbench");
+  const tabHistory = document.getElementById("tabHistory");
+  const workbenchView = document.getElementById("workbenchView");
+  const historyView = document.getElementById("historyView");
+
+  function switchView(viewName) {
+    if (viewName === "workbench") {
+      tabWorkbench.classList.add("active");
+      tabHistory.classList.remove("active");
+      workbenchView.classList.add("active");
+      historyView.classList.remove("active");
+      renderWorkOrder();
+    } else if (viewName === "history") {
+      tabWorkbench.classList.remove("active");
+      tabHistory.classList.add("active");
+      workbenchView.classList.remove("active");
+      historyView.classList.add("active");
+      renderHistoryTable();
+    }
+  }
+
+  tabWorkbench.addEventListener("click", () => switchView("workbench"));
+  tabHistory.addEventListener("click", () => switchView("history"));
+
+  // History Directory Filters
+  const historySearchInput = document.getElementById("historySearchInput");
+  const historyStatusFilter = document.getElementById("historyStatusFilter");
+  const historySortSelect = document.getElementById("historySortSelect");
+
+  if (historySearchInput) historySearchInput.addEventListener("input", renderHistoryTable);
+  if (historyStatusFilter) historyStatusFilter.addEventListener("change", renderHistoryTable);
+  if (historySortSelect) historySortSelect.addEventListener("change", renderHistoryTable);
+
+  const btnHistoryNewOrder = document.getElementById("btnHistoryNewOrder");
+  if (btnHistoryNewOrder) {
+    btnHistoryNewOrder.addEventListener("click", () => {
+      document.getElementById("newWorkOrderBtn").click();
     });
+  }
+
+  // Digital Sign Modal Handlers
+  const signModal = document.getElementById("signModal");
+  document.getElementById("closeSignModal").addEventListener("click", () => {
+    signModal.classList.remove("open");
+  });
+  document.getElementById("cancelSignModal").addEventListener("click", () => {
+    signModal.classList.remove("open");
+  });
+
+  document.getElementById("signModalForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const order = WORK_ORDERS_DATA[currentOrderIndex];
+    const stepId = parseInt(document.getElementById("signStepId").value, 10);
+    const step = order.auditSteps.find(s => s.id === stepId);
+    if (!step) return;
+
+    step.person = document.getElementById("signPersonName").value.trim();
+    step.verified = true;
+    step.status = stepId === 3 ? "Released" : stepId === 4 ? "Loaded & Dispatched" : "Approved";
+    const now = new Date();
+    step.time = `${now.toLocaleDateString("en-GB")} ${now.toLocaleTimeString("en-GB", { hour: '2-digit', minute: '2-digit' })}`;
+
+    renderAuditChain();
+    signModal.classList.remove("open");
+    showToast(`Digitally signed and sealed by ${step.person}!`);
   });
 });
+
+// Render Past Work Orders Directory Table
+function renderHistoryTable() {
+  const tbody = document.getElementById("historyTableBody");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  const query = (document.getElementById("historySearchInput")?.value || "").toLowerCase().trim();
+  const statusFilter = document.getElementById("historyStatusFilter")?.value || "ALL";
+  const sortBy = document.getElementById("historySortSelect")?.value || "newest";
+
+  let filtered = WORK_ORDERS_DATA.map((wo, originalIdx) => {
+    let totalQty = 0;
+    let totalMeters = 0;
+    let totalWeight = 0;
+    let totalAmount = 0;
+
+    wo.items.forEach(it => {
+      const q = Number(it.qty) || 0;
+      const len = Number(it.lengthMm) || 0;
+      totalQty += q;
+      totalMeters += Math.round((q * len) / 1000);
+      totalWeight += Number(it.weight) || 0;
+      totalAmount += q * (Number(it.price) || 0);
+    });
+
+    const signedCount = wo.auditSteps ? wo.auditSteps.filter(s => s.verified).length : 0;
+
+    return {
+      ...wo,
+      originalIdx,
+      calcTotalQty: totalQty,
+      calcTotalMeters: totalMeters,
+      calcTotalWeight: totalWeight,
+      calcTotalAmount: totalAmount,
+      signedCount
+    };
+  });
+
+  // Filter
+  if (query) {
+    filtered = filtered.filter(wo => 
+      wo.id.toLowerCase().includes(query) ||
+      wo.destination.toLowerCase().includes(query) ||
+      wo.vendorCode.toLowerCase().includes(query) ||
+      wo.items.some(it => it.partNo.toLowerCase().includes(query) || it.description.toLowerCase().includes(query) || (it.custRef && it.custRef.toLowerCase().includes(query)))
+    );
+  }
+
+  if (statusFilter !== "ALL") {
+    filtered = filtered.filter(wo => wo.status === statusFilter);
+  }
+
+  // Sort
+  if (sortBy === "oldest") {
+    filtered.sort((a, b) => a.originalIdx - b.originalIdx);
+  } else if (sortBy === "highest") {
+    filtered.sort((a, b) => b.calcTotalAmount - a.calcTotalAmount);
+  } else if (sortBy === "qty") {
+    filtered.sort((a, b) => b.calcTotalQty - a.calcTotalQty);
+  } else {
+    // Newest
+    filtered.sort((a, b) => b.originalIdx - a.originalIdx);
+  }
+
+  // Update Count Badge
+  const countEl = document.getElementById("historyTabCount");
+  if (countEl) countEl.textContent = WORK_ORDERS_DATA.length;
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="13" style="text-align: center; padding: 36px 16px; color: var(--color-ink-500);">
+          <div style="font-size: 14px; font-weight: 700; margin-bottom: 4px;">No matching work orders found</div>
+          <div style="font-size: 11.5px;">Try adjusting your search terms or filters.</div>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  filtered.forEach(wo => {
+    let statusClass = "status-confirmed";
+    if (wo.status === "DRAFT") statusClass = "status-draft";
+    if (wo.status.includes("RELEASED")) statusClass = "status-released";
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="part-code-cell" style="font-weight: 800; color: var(--color-forest-900);">#${wo.id}</td>
+      <td style="font-size: 11.5px;">${wo.issueDate}</td>
+      <td style="font-size: 11.5px; font-weight: 600; color: #b45309;">${wo.deliveryTarget}</td>
+      <td>
+        <div style="font-weight: 700; color: var(--color-ink-900);">${wo.destination}</div>
+        <div style="font-size: 10.5px; color: var(--color-ink-500);">${wo.destinationSub || "Direct Consignment"}</div>
+      </td>
+      <td style="font-family: var(--font-mono); font-size: 11.5px; font-weight: 700;">${wo.vendorCode}</td>
+      <td class="text-center font-mono">${wo.items.length}</td>
+      <td class="text-right font-mono text-bold">${formatNum(wo.calcTotalQty)}</td>
+      <td class="text-right font-mono text-bold">${formatNum(wo.calcTotalMeters)}</td>
+      <td class="text-right font-mono">${formatNum(wo.calcTotalWeight)} Kgs</td>
+      <td class="text-right font-mono text-bold text-emerald">₹${formatNum(wo.calcTotalAmount)}</td>
+      <td class="text-center">
+        <span class="status-badge ${statusClass}" style="font-size: 9.5px; padding: 2px 7px;">${wo.status}</span>
+      </td>
+      <td class="text-center font-mono" style="font-size: 11px;">
+        <span style="color: ${wo.signedCount === 4 ? '#059669' : '#d97706'}; font-weight: 700;">${wo.signedCount}/4 Signed</span>
+      </td>
+      <td class="text-center">
+        <div class="row-actions-cell">
+          <button class="btn-icon-small" title="Open in Workbench" onclick="openOrderFromHistory(${wo.originalIdx})">
+            <svg viewBox="0 0 20 20" fill="currentColor" style="width: 12px; height: 12px; color: var(--color-forest-700);">
+              <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+              <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
+            </svg>
+          </button>
+          <button class="btn-icon-small" title="Print Physical Memo" onclick="printOrderFromHistory(${wo.originalIdx})">
+            <svg viewBox="0 0 20 20" fill="currentColor" style="width: 12px; height: 12px;">
+              <path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a2 2 0 002 2h6a2 2 0 002-2v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm8 0H7v3h6V4zm0 8H7v4h6v-4z" clip-rule="evenodd"/>
+            </svg>
+          </button>
+          <button class="btn-icon-small btn-delete" title="Delete Work Order" onclick="deleteOrderFromHistory(${wo.originalIdx})">
+            <svg viewBox="0 0 20 20" fill="currentColor" style="width: 12px; height: 12px;">
+              <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+            </svg>
+          </button>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// Global helper: Open order from history table
+window.openOrderFromHistory = function(idx) {
+  currentOrderIndex = idx;
+  document.getElementById("tabWorkbench").click();
+  showToast(`Opened Work Order #${WORK_ORDERS_DATA[idx].id} in Workbench`);
+};
+
+// Global helper: Print order from history table
+window.printOrderFromHistory = function(idx) {
+  currentOrderIndex = idx;
+  renderWorkOrder();
+  openPrintMemoModal();
+};
+
+// Global helper: Delete order from history table
+window.deleteOrderFromHistory = function(idx) {
+  const wo = WORK_ORDERS_DATA[idx];
+  if (confirm(`Are you sure you want to delete Work Order #${wo.id}?`)) {
+    WORK_ORDERS_DATA.splice(idx, 1);
+    if (currentOrderIndex >= WORK_ORDERS_DATA.length) {
+      currentOrderIndex = Math.max(0, WORK_ORDERS_DATA.length - 1);
+    }
+    renderHistoryTable();
+    showToast(`Deleted Work Order #${wo.id}`);
+  }
+};
