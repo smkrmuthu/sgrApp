@@ -153,8 +153,16 @@ const SEED_WORK_ORDERS = [
 // with Supabase configured, the shared database is the source of truth and there are no samples.
 const WORK_ORDERS_DATA = OrderStore.load(Cloud.configured ? [] : SEED_WORK_ORDERS);
 
-// Current Active Work Order Pointer
-let currentOrderIndex = 0;
+// Index of the work order open in the Workbench; -1 = none open (the Workbench shows the create/open card).
+// Orders are opened from Past Work Orders (or the Switch Order drawer) or created with New Work Order.
+let currentOrderIndex = -1;
+
+// Guard for actions that need an open order (menu items stay clickable when none is open)
+function requireOpenOrder() {
+  if (WORK_ORDERS_DATA[currentOrderIndex]) return true;
+  showToast("Open or create a work order first.", "error");
+  return false;
+}
 
 // Single funnel for saving: call after every change to WORK_ORDERS_DATA, passing the order that changed
 // (it is saved on this device at once and queued for the shared database).
@@ -212,6 +220,9 @@ function updateOrderCounts() {
 
   const menuOrdersCountEl = document.getElementById("menuOrdersCount");
   if (menuOrdersCountEl) menuOrdersCountEl.textContent = `${WORK_ORDERS_DATA.length} Active`;
+
+  const historyTabCountEl = document.getElementById("historyTabCount");
+  if (historyTabCountEl) historyTabCountEl.textContent = WORK_ORDERS_DATA.length;
 }
 
 function renderWorkOrder() {
@@ -499,8 +510,8 @@ window.editItem = function(index) {
 
 // Populate & Show Physical Print Memo Modal (Doc Ref: SGR-MKT-02)
 function openPrintMemoModal() {
+  if (!requireOpenOrder()) return;
   const order = WORK_ORDERS_DATA[currentOrderIndex];
-  if (!order) return;
 
   document.getElementById("printVendorCode").textContent = order.vendorCode;
   document.getElementById("printWoNo").textContent = order.id;
@@ -734,6 +745,7 @@ document.addEventListener("DOMContentLoaded", () => {
     currentOrderIndex = WORK_ORDERS_DATA.length - 1;
     persistOrders(newOrder);
     renderWorkOrder();
+    document.getElementById("tabWorkbench").click();   // e.g. created from Past Work Orders: show the new order
     newWoModal.classList.remove("open");
     showToast(`Work Order #${woNum} created successfully!`);
   });
@@ -776,6 +788,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Edit Header Modal Handlers
   const editHeaderModal = document.getElementById("editHeaderModal");
   document.getElementById("editOrderHeaderBtn").addEventListener("click", () => {
+    if (!requireOpenOrder()) return;
     const order = WORK_ORDERS_DATA[currentOrderIndex];
     document.getElementById("editWoId").value = order.id;
     document.getElementById("editDocRef").value = order.docRef;
@@ -821,11 +834,13 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("exportPdfBtn").addEventListener("click", () => {
+    if (!requireOpenOrder()) return;
     openPrintMemoModal();
     showToast("Opening Print & PDF export preview...");
   });
 
   document.getElementById("releaseFloorBtn").addEventListener("click", () => {
+    if (!requireOpenOrder()) return;
     const order = WORK_ORDERS_DATA[currentOrderIndex];
     order.status = "RELEASED — IN PRODUCTION";
     persistOrders(order);
@@ -1231,9 +1246,8 @@ window.deleteOrderFromHistory = function(idx) {
   const wo = WORK_ORDERS_DATA[idx];
   if (confirm(`Are you sure you want to delete Work Order #${wo.id}?`)) {
     WORK_ORDERS_DATA.splice(idx, 1);
-    if (currentOrderIndex >= WORK_ORDERS_DATA.length) {
-      currentOrderIndex = Math.max(0, WORK_ORDERS_DATA.length - 1);
-    }
+    if (idx === currentOrderIndex) currentOrderIndex = -1;          // the open order was deleted
+    else if (idx < currentOrderIndex) currentOrderIndex--;          // list shifted up under the open one
     persistOrders();
     Cloud.queueDelete(wo.uid);
     renderHistoryTable();
@@ -1249,7 +1263,7 @@ document.addEventListener("DOMContentLoaded", () => {
     saveLocal: () => OrderStore.save(WORK_ORDERS_DATA),
     onChange: (activeUid) => {
       const idx = WORK_ORDERS_DATA.findIndex(o => o.uid === activeUid);
-      currentOrderIndex = idx >= 0 ? idx : Math.min(currentOrderIndex, Math.max(0, WORK_ORDERS_DATA.length - 1));
+      currentOrderIndex = idx;   // -1 (nothing open) if no order was open or it was deleted elsewhere
       renderWorkOrder();
       renderHistoryTable();
     },

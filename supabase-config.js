@@ -6,5 +6,5 @@
 // While anonKey is empty the app runs local-only (orders saved in this browser, no sign-in screen).
 window.SGR_SUPABASE = {
   url: "https://zuvmolgdmhbgqonzpjcg.supabase.co",
-  anonKey: ""   // paste the anon / public key: Supabase -> Project Settings -> API Keys
+  anonKey: "sb_publishable_ClscppU0a-LutkRhS13oWw_6IWqkGjk"   // publishable (public) key. Never put the secret key here.
 };

@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=3" />
+  <link rel="stylesheet" href="style.css?v=4" />
 </head>
 <body>
   <!-- TOP APP BAR -->
@@ -179,11 +179,14 @@
 
     <!-- VIEW 1: ACTIVE WORKBENCH -->
     <div id="workbenchView" class="view-panel active">
-      <!-- shown only when there are no work orders (see .is-empty in style.css) -->
+      <!-- shown while no work order is open (see .is-empty in style.css) -->
       <section class="empty-state-card" id="emptyState">
-        <h2>No work orders yet</h2>
-        <p>Create the first work order to get started.</p>
-        <button type="button" class="action-btn action-primary" onclick="document.getElementById('newWorkOrderBtn').click()">+ New Work Order</button>
+        <h2>Create a Work Order</h2>
+        <p>Start a new work order, or open an existing one from Past Work Orders.</p>
+        <div class="empty-state-actions">
+          <button type="button" class="action-btn action-primary" onclick="document.getElementById('newWorkOrderBtn').click()">+ New Work Order</button>
+          <button type="button" class="action-btn" onclick="document.getElementById('tabHistory').click()">Open from Past Work Orders</button>
+        </div>
       </section>
 
 
@@ -1375,7 +1378,7 @@
           crossorigin="anonymous"></script>
   <script src="storage.js?v=2"></script>
   <script src="db.js?v=1"></script>
-  <script src="app.js?v=4"></script>
+  <script src="app.js?v=5"></script>
 
   <!-- INLINE TAB SWITCHING — Guaranteed to work independent of app.js load state -->
   <script>
