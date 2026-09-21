@@ -1477,84 +1477,6 @@ button, input, select, textarea {
 }
 
 /* ==========================================================================
-   BOTTOM SHOPFLOOR TELEMETRY BAR
-   ========================================================================== */
-.shopfloor-telemetry-bar {
-  background: var(--color-forest-900);
-  color: var(--color-white);
-  border-radius: var(--radius-lg);
-  padding: 10px 18px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-forest-700);
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.telemetry-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.machine-icon-box {
-  width: 32px;
-  height: 32px;
-  background: var(--color-forest-700);
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-kraft-300);
-  border: 1px solid var(--color-forest-500);
-}
-
-.machine-icon-box svg {
-  width: 18px;
-  height: 18px;
-}
-
-.machine-name {
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-  color: var(--color-kraft-100);
-}
-
-.machine-details {
-  font-size: 11px;
-  color: var(--color-forest-100);
-  opacity: 0.9;
-}
-
-.telemetry-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.telemetry-tag {
-  font-size: 10.5px;
-  font-weight: 700;
-  color: var(--color-kraft-300);
-  letter-spacing: 0.6px;
-}
-
-.tooling-status-badge {
-  background: #064e3b;
-  color: #a7f3d0;
-  border: 1px solid #059669;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-  font-family: var(--font-mono);
-}
-
-/* ==========================================================================
    MODAL & DRAWER SYSTEM
    ========================================================================== */
 .modal-backdrop, .drawer-backdrop {
@@ -2543,3 +2465,30 @@ html.auth-locked body > *:not(#loginGate):not(script):not(style):not(link) {
   justify-content: center;
   gap: 12px;
 }
+
+/* ---------------------------------------------------------------- Users tab (MD) */
+.users-message { margin: 0 0 8px; color: #6b7280; font-size: 13px; }
+.users-message.is-error { color: #b91c1c; }
+.users-table td { vertical-align: middle; }
+.users-actions-cell { text-align: center; white-space: nowrap; }
+.users-action-btn { padding: 5px 12px; font-size: 11px; }
+.users-action-btn + .users-action-btn { margin-left: 6px; }
+.users-delete-btn { color: #b91c1c; }
+.users-delete-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.role-chip {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #e5e7eb;
+  color: #374151;
+}
+.role-chip.role-md { background: #fde68a; color: #78350f; }
+.role-chip.role-prod { background: #bbf7d0; color: #14532d; }
+.role-chip.role-qa { background: #bfdbfe; color: #1e3a8a; }
+
+.password-row { display: flex; gap: 8px; }
+.password-row .form-control { flex: 1; }
+.field-hint { margin: 6px 0 0; font-size: 12px; color: #6b7280; }

@@ -1267,6 +1267,7 @@ document.addEventListener("DOMContentLoaded", () => {
       renderWorkOrder();
       renderHistoryTable();
     },
-    toast: showToast
+    toast: showToast,
+    onProfile: (profile) => UsersAdmin.setProfile(profile)
   });
 });

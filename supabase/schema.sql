@@ -44,10 +44,13 @@ create table if not exists public.audit_steps (
   verified    boolean not null default false,
   time        text,                               -- display string shown in the app
   signed_by   uuid,                               -- login that pressed "sign" (set by the server)
+  signed_by_email text,                           -- that login's email at the time (kept even if the user is deleted later)
   signed_at   timestamptz,                        -- when (set by the server, not editable from the app)
   data        jsonb not null default '{}'::jsonb,
   primary key (order_uid, step_id)
 );
+
+alter table public.audit_steps add column if not exists signed_by_email text;   -- for projects created before this column existed
 
 create index if not exists work_orders_order_no_idx on public.work_orders (order_no);
 create index if not exists work_orders_created_at_idx on public.work_orders (created_at);
@@ -84,6 +87,59 @@ begin
       'create policy "signed-in users full access" on public.%I for all to authenticated using (true) with check (true)', t);
   end loop;
 end $$;
+
+-- ---------------------------------------------------------------- users and roles
+-- One profile row per login. The browser can only READ profiles (its own; the MD reads everyone's).
+-- Nothing in the browser can write them: roles are changed only by the `manage-users` Edge Function
+-- (supabase/functions/manage-users), which runs with the admin key after checking the caller is an MD.
+-- Roles: md = managing director (can manage users), prod = production, qa = quality, staff = no special role.
+
+create table if not exists public.profiles (
+  id          uuid primary key references auth.users(id) on delete cascade,
+  email       text not null,
+  full_name   text,
+  role        text not null default 'staff' check (role in ('md', 'prod', 'qa', 'staff')),
+  created_at  timestamptz not null default now()
+);
+
+alter table public.profiles enable row level security;
+
+create or replace function public.is_md() returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.profiles where id = auth.uid() and role = 'md')
+$$;
+
+drop policy if exists "read own profile; MD reads all" on public.profiles;
+create policy "read own profile; MD reads all" on public.profiles
+  for select to authenticated using (id = auth.uid() or public.is_md());
+-- (deliberately no insert / update / delete policies: clients cannot change profiles or roles)
+
+-- every new login automatically gets a profile (role "staff" until an MD changes it)
+create or replace function public.handle_new_user() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.profiles (id, email) values (new.id, new.email) on conflict (id) do nothing;
+  return new;
+end $$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created after insert on auth.users
+  for each row execute function public.handle_new_user();
+
+-- keep the profile's email in step if a login's email is changed
+create or replace function public.sync_profile_email() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  update public.profiles set email = new.email where id = new.id;
+  return new;
+end $$;
+
+drop trigger if exists on_auth_user_email_changed on auth.users;
+create trigger on_auth_user_email_changed after update of email on auth.users
+  for each row when (old.email is distinct from new.email) execute function public.sync_profile_email();
+
+-- logins created before this section existed
+insert into public.profiles (id, email) select id, email from auth.users on conflict (id) do nothing;
 
 -- ---------------------------------------------------------------- save function
 -- The app saves one whole order per call (header + items + sign-off steps) in ONE transaction.
@@ -147,10 +203,11 @@ begin
    where order_uid = v_uid
      and step_id not in (select (x->>'step_id')::int from jsonb_array_elements(coalesce(p->'audit_steps', '[]'::jsonb)) x);
 
-  insert into public.audit_steps as s (order_uid, step_id, role, person, status, verified, time, signed_by, signed_at, data)
+  insert into public.audit_steps as s (order_uid, step_id, role, person, status, verified, time, signed_by, signed_by_email, signed_at, data)
   select v_uid, (x->>'step_id')::int, x->>'role', x->>'person', x->>'status',
          coalesce((x->>'verified')::boolean, false), x->>'time',
          case when coalesce((x->>'verified')::boolean, false) then auth.uid() end,
+         case when coalesce((x->>'verified')::boolean, false) then auth.jwt()->>'email' end,
          case when coalesce((x->>'verified')::boolean, false) then now() end,
          coalesce(x->'data', '{}'::jsonb)
     from jsonb_array_elements(coalesce(p->'audit_steps', '[]'::jsonb)) x
@@ -164,6 +221,8 @@ begin
     -- keep the original signer/time while it stays verified; clear when un-verified
     signed_by = case when not excluded.verified then null
                      when s.verified then s.signed_by else auth.uid() end,
+    signed_by_email = case when not excluded.verified then null
+                     when s.verified then s.signed_by_email else auth.jwt()->>'email' end,
     signed_at = case when not excluded.verified then null
                      when s.verified then s.signed_at else now() end;
 

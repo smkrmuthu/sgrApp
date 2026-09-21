@@ -76,6 +76,7 @@ const Cloud = (() => {
   // ------------------------------------------------------------ state
   let client = null;
   let session = null;
+  let profile = null;                   // this login's role, from the profiles table
   let env = null;                       // callbacks and the live orders array, supplied by app.js
   let flushing = false;
   let flushTimer = null;
@@ -283,8 +284,44 @@ const Cloud = (() => {
     if (out) out.style.display = on ? "" : "none";
   }
 
+  // Who am I (role)? Used to show the Users tab to an MD. The server re-checks the role on every request.
+  async function loadProfile() {
+    profile = null;
+    const { data } = await client.from("profiles").select("role, full_name, email").eq("id", session.user.id).maybeSingle();
+    profile = data || null;
+    if (env.onProfile) env.onProfile(profile);
+  }
+
+  // Calls the manage-users function (MD only). Resolves to { data } or { error: "readable message" }.
+  // The project's public key goes in Authorization (the platform accepts it) and the person's login in
+  // x-user-token, which the function verifies itself. See the note at the top of the function.
+  async function manageUsers(body) {
+    if (!active()) return { error: "Not signed in." };
+    const { data: current } = await client.auth.getSession();       // fresh token (refreshed if needed)
+    const token = current && current.session ? current.session.access_token : "";
+    const { data, error } = await client.functions.invoke("manage-users", {
+      body,
+      headers: { Authorization: `Bearer ${cfg.anonKey}`, "x-user-token": token }
+    });
+    if (!error) return data && data.error ? { error: data.error } : { data };
+
+    const response = error.context && typeof error.context.json === "function" ? error.context : null;
+    if (!response) {
+      // No answer at all: offline, or the browser blocked the call (this page's address isn't allowed)
+      return { error: "Couldn't reach the user service. Check your internet connection, and open the app from the live site." };
+    }
+    if (response.status === 404) return { error: "The user service isn't set up yet (see supabase/SETUP.md, step 8)." };
+    try {
+      const j = await response.json();
+      const text = j && (j.error || j.message || j.msg);
+      if (text) return { error: response.status === 401 && !j.error ? `The user service refused the login (${text}).` : text };
+    } catch (e) { /* not JSON */ }
+    return { error: `The user service returned an error (HTTP ${response.status}).` };
+  }
+
   function afterSignIn() {
     setStatus();
+    loadProfile();
     if (!listenersBound) {
       listenersBound = true;
       window.addEventListener("online", () => { flush().then(() => pull({ force: true })); });
@@ -295,7 +332,7 @@ const Cloud = (() => {
     pull({ force: true });
   }
 
-  // env = { orders, getActiveUid(), saveLocal(), onChange(activeUid), toast(msg, type) }
+  // env = { orders, getActiveUid(), saveLocal(), onChange(activeUid), toast(msg, type), onProfile(profile) }
   async function start(e) {
     env = e;
     if (!configured) return;             // local-only mode
@@ -310,7 +347,7 @@ const Cloud = (() => {
     client = window.supabase.createClient(cfg.url, cfg.anonKey);
     client.auth.onAuthStateChange((event, s) => {      // note: no awaits in here (supabase-js requirement)
       session = s;
-      if (event === "SIGNED_OUT") lock();
+      if (event === "SIGNED_OUT") { profile = null; if (env.onProfile) env.onProfile(null); lock(); }
     });
     const { data } = await client.auth.getSession();
     session = data.session;
@@ -318,5 +355,9 @@ const Cloud = (() => {
     unlock(); afterSignIn();
   }
 
-  return { configured, start, queueSave, queueDelete, pull, flush, toPayload, fromRow };
+  return {
+    configured, start, queueSave, queueDelete, pull, flush, toPayload, fromRow, manageUsers,
+    getUserId: () => (session && session.user ? session.user.id : null),
+    getProfile: () => profile
+  };
 })();

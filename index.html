@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=4" />
+  <link rel="stylesheet" href="style.css?v=6" />
 </head>
 <body>
   <!-- TOP APP BAR -->
@@ -138,11 +138,11 @@
         </div>
       </div>
 
-      <div class="user-profile-badge">
-        <div class="avatar">PL</div>
+      <div class="user-profile-badge" id="userBadge">
+        <div class="avatar" id="userAvatar">PL</div>
         <div class="user-meta">
-          <span class="user-name">Production Lead</span>
-          <span class="user-id">ID: SGR-PL-04</span>
+          <span class="user-name" id="userNameText">Production Lead</span>
+          <span class="user-id" id="userRoleText">ID: SGR-PL-04</span>
         </div>
       </div>
     </div>
@@ -166,6 +166,14 @@
           <polyline points="12 6 12 12 16 14"></polyline>
         </svg>
         <span>PAST WORK ORDERS (<span id="historyTabCount">3</span>)</span>
+      </button>
+      <button class="nav-tab" id="tabUsers" data-view="users" onclick="switchMainView('users')" style="display: none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+        <span>USERS (<span id="usersCount">0</span>)</span>
       </button>
     </div>
     <div class="nav-extra-status">
@@ -800,31 +808,99 @@
       </section>
     </div> <!-- END VIEW 2: PAST WORK ORDERS -->
 
-    <!-- BOTTOM MACHINE & SHOPFLOOR TELEMETRY STATUS BAR -->
-    <footer class="shopfloor-telemetry-bar">
-      <div class="telemetry-left">
-        <div class="machine-icon-box">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="2" y="6" width="20" height="12" rx="2"/>
-            <path d="M12 12h.01M17 12h.01M7 12h.01"/>
-          </svg>
-        </div>
-        <div class="machine-meta">
-          <div class="machine-name">SGR Edge Board Production Line 02</div>
-          <div class="machine-details">
-            Perundurai Plant SIPCOT // Estimated run cycle: <strong>3 hrs 45 mins</strong> @ 22 m/min speed // Slitter Blades calibrated for 6mm wall thickness.
+    <!-- VIEW 3: USERS (MD only; the tab stays hidden for everyone else) -->
+    <div id="usersView" class="view-panel">
+      <section class="history-directory-card">
+        <div class="directory-top-bar">
+          <div class="directory-title-wrap">
+            <h2 class="directory-title">USERS &amp; ROLES</h2>
+            <p class="directory-subtitle">Add people, change their role or password, or remove their access</p>
+          </div>
+          <div class="directory-actions">
+            <button class="action-btn action-primary" id="btnAddUser">
+              <svg viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+                <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
+              </svg>
+              <span>Add User</span>
+            </button>
           </div>
         </div>
-      </div>
-      <div class="telemetry-right">
-        <span class="telemetry-tag">OPERATOR SHIFT STATUS:</span>
-        <span class="tooling-status-badge">Line Clear // Tooling Ready</span>
-      </div>
-    </footer>
+        <p class="users-message" id="usersMessage" role="status"></p>
+        <div class="table-container">
+          <table class="schedule-table users-table">
+            <thead>
+              <tr>
+                <th>EMAIL (LOGIN)</th>
+                <th>NAME</th>
+                <th style="width: 130px;">ROLE</th>
+                <th style="width: 190px;">LAST SIGN-IN</th>
+                <th style="width: 170px;" class="text-center">ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody id="usersTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div> <!-- END VIEW 3: USERS -->
 
   </main>
 
   <!-- DIGITAL SIGN-OFF MODAL -->
+  <!-- ADD / EDIT USER (MD only) -->
+  <div class="modal-backdrop" id="userModal">
+    <div class="modal-dialog" style="width: 480px;">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="8.5" cy="7" r="4"></circle>
+              <line x1="20" y1="8" x2="20" y2="14"></line>
+              <line x1="23" y1="11" x2="17" y2="11"></line>
+            </svg>
+          </div>
+          <div>
+            <h3 id="userModalTitle">Add User</h3>
+            <p>Login details and role</p>
+          </div>
+        </div>
+        <button type="button" class="modal-close-btn" id="closeUserModal">&times;</button>
+      </div>
+      <form id="userForm" class="modal-form" autocomplete="off">
+        <div class="form-group">
+          <label for="userEmail">Email (used to sign in)</label>
+          <input type="email" id="userEmail" class="form-control" required autocomplete="off" />
+        </div>
+        <div class="form-group">
+          <label for="userName">Name</label>
+          <input type="text" id="userName" class="form-control" placeholder="e.g. Production, QA, Managing Director" autocomplete="off" />
+        </div>
+        <div class="form-group">
+          <label for="userRole">Role</label>
+          <select id="userRole" class="form-select">
+            <option value="staff">Staff (no special role)</option>
+            <option value="prod">Production</option>
+            <option value="qa">QA (Quality)</option>
+            <option value="md">MD (can manage users)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="userPassword">Password</label>
+          <div class="password-row">
+            <input type="password" id="userPassword" class="form-control" minlength="8" autocomplete="new-password" />
+            <button type="button" class="action-btn" id="userGenPassword">Generate</button>
+          </div>
+          <p class="field-hint" id="userPasswordHint"></p>
+        </div>
+        <p class="login-error" id="userFormError" role="alert"></p>
+        <div class="modal-footer">
+          <button type="button" class="btn-cancel" id="cancelUserModal">Cancel</button>
+          <button type="submit" class="btn-create" id="userSubmit">Create User</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- SIGN-IN GATE (only used when the shared database is configured) -->
   <div class="modal-backdrop" id="loginGate">
     <div class="modal-dialog" style="width: 420px;">
@@ -1377,41 +1453,30 @@
           integrity="sha384-iLddHTLokph6Omwoyid4XKxHaWa6w41BnoEj0q5oOrzmYPpHIKt1wyjReA7s//pP"
           crossorigin="anonymous"></script>
   <script src="storage.js?v=2"></script>
-  <script src="db.js?v=1"></script>
-  <script src="app.js?v=5"></script>
+  <script src="db.js?v=3"></script>
+  <script src="users.js?v=2"></script>
+  <script src="app.js?v=6"></script>
 
   <!-- INLINE TAB SWITCHING — Guaranteed to work independent of app.js load state -->
   <script>
     function switchMainView(viewName) {
-      var workbenchView = document.getElementById('workbenchView');
-      var historyView = document.getElementById('historyView');
-      var tabWorkbench = document.getElementById('tabWorkbench');
-      var tabHistory = document.getElementById('tabHistory');
-
-      if (viewName === 'history') {
-        // Show history, hide workbench
-        workbenchView.style.display = 'none';
-        historyView.style.display = 'flex';
-        historyView.style.flexDirection = 'column';
-        historyView.style.gap = '16px';
-        tabWorkbench.classList.remove('active');
-        tabHistory.classList.add('active');
-        // Scroll to top
-        window.scrollTo(0, 0);
-        // Trigger the JS render if available
-        if (typeof renderHistoryTable === 'function') renderHistoryTable();
-      } else {
-        // Show workbench, hide history
-        historyView.style.display = 'none';
-        workbenchView.style.display = 'flex';
-        workbenchView.style.flexDirection = 'column';
-        workbenchView.style.gap = '16px';
-        tabHistory.classList.remove('active');
-        tabWorkbench.classList.add('active');
-        // Scroll to top
-        window.scrollTo(0, 0);
-        if (typeof renderWorkOrder === 'function') renderWorkOrder();
-      }
+      var views = { workbench: 'workbenchView', history: 'historyView', users: 'usersView' };
+      var tabs = { workbench: 'tabWorkbench', history: 'tabHistory', users: 'tabUsers' };
+      Object.keys(views).forEach(function (key) {
+        var view = document.getElementById(views[key]);
+        var tab = document.getElementById(tabs[key]);
+        var on = key === viewName;
+        if (view) {
+          view.style.display = on ? 'flex' : 'none';
+          if (on) { view.style.flexDirection = 'column'; view.style.gap = '16px'; }
+        }
+        if (tab) tab.classList.toggle('active', on);
+      });
+      window.scrollTo(0, 0);
+      // Trigger the JS render if available
+      if (viewName === 'history' && typeof renderHistoryTable === 'function') renderHistoryTable();
+      else if (viewName === 'users' && typeof UsersAdmin !== 'undefined') UsersAdmin.refresh();
+      else if (viewName === 'workbench' && typeof renderWorkOrder === 'function') renderWorkOrder();
     }
   </script>
 </body>
